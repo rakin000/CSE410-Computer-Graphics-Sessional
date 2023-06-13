@@ -1,0 +1,12 @@
+OpenGL Helpful Resources
+2D Graphics: https://www3.ntu.edu.sg/home/ehchua/programming/opengl/cg_introduction.html
+
+3D Graphics: 
+https://www3.ntu.edu.sg/home/ehchua/programming/opengl/CG_BasicsTheory.html
+https://www3.ntu.edu.sg/home/ehchua/programming/opengl/CG_Examples.html
+
+Documentation:
+glut: https://www.opengl.org/resources/libraries/glut/spec3/node1.html
+gl + glu: https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/
+
+Last modified: Saturday, 3 June 2023, 1:37 PM
