@@ -1,8 +1,9 @@
 #define _USE_MATH_DEFINES
 
-#include <windows.h>  // For MS Windows
+// #include <windows.h>  // For MS Windows
 #include <GL/glut.h>  // GLUT, includes glu.h and gl.h
 #include <cmath>
+#include <iostream>
 
 GLdouble px = 0, py = 0;
 
@@ -24,9 +25,10 @@ void mouse(int button, int state, int x, int y) {
     // (x, y) is the mouse-click location.
     // button: GLUT_LEFT_BUTTON, GLUT_RIGHT_BUTTON, GLUT_MIDDLE_BUTTON
     // state: GLUT_UP, GLUT_DOWN
+    std::cerr << x << " "<<y<< std::endl;
     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-        px = -1.0 + x * 2.0 / 640.0;
-        py = 1.0 - y * 2.0 / 640.0;
+        px =  x * 2.0 / 640.0;
+        py =  y * 2.0 / 640.0;
         glutPostRedisplay();
     }
 }
