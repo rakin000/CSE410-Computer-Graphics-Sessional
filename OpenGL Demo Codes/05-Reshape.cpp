@@ -1,6 +1,6 @@
 #define _USE_MATH_DEFINES
 
-#include <windows.h>  // for MS Windows
+// #include <windows.h>  // for MS Windows
 #include <GL/glut.h>  // GLUT, include glu.h and gl.h
 #include <cmath>
 
