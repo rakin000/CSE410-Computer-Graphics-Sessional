@@ -46,6 +46,7 @@ void display() {
 
     // Draw the Square
     glRotatef(rev_a, 0,0,1);    // Align everything for Revolution of the Square about the Triangle
+    glRotatef(rev_a,1,0,0) ;
     glTranslatef(0.6,0,0);  // Translate everything by distance between the Triangle and the Square
     glPushMatrix();
         glScalef(0.25,0.25,1);  // Scale down the Square
@@ -57,6 +58,18 @@ void display() {
             glVertex2f(0.5,-0.5);
             glVertex2f(-0.5,-0.5);
         glEnd();
+        glPushMatrix();
+            glTranslatef(0.6,0,0);
+            glScalef(0.5,0.5,0.5);
+            glBegin(GL_QUADS);
+                glColor3f(1,0,0);   // Red
+                glVertex2f(-0.5,0.5);
+                glVertex2f(0.5,0.5);
+                glVertex2f(0.5,-0.5);
+                glVertex2f(-0.5,-0.5);
+            glEnd();
+        glPopMatrix();
+
     glPopMatrix();
 
     glutSwapBuffers();      // Swap front and back buffers (of double buffered mode)

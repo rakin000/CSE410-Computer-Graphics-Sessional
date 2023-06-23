@@ -26,8 +26,7 @@ void drawAxes() {
 
         glColor3f(0,1,0);   // Green
         // Y axis
-        glVertex3f(0,0,0);
-        glVertex3f(0,1,0);
+        glVertex3f(0,0,0);        glVertex3f(0,1,0);
 
         glColor3f(0,0,1);   // Blue
         // Z axis

@@ -8,7 +8,7 @@ void initGL() {
 }
 
 // Global variables
-GLfloat angle = 0.0f;   // Orientation of Triangle
+GLfloat angle = 0.1f;   // Orientation of Triangle
 GLfloat tr_x = 0;       // x-coordinate of center of Triangle
 GLfloat tr_y = 0;       // y-coordinate of center of Triangle
 GLfloat tr_v = 0.001;   // Velocity of Triangle

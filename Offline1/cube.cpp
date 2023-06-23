@@ -6,12 +6,25 @@
 
 using namespace std ;
 
+struct Color{
+    GLfloat R,G,B ;
+} PINK = { 235/255.0, 52/255.0, 186/255.0},CYAN = {52/255.0, 201/255.0, 235/255.0};
+#define GLCOLOR(color) glColor3f(color.R,color.G,color.B);
 
-double hh=11,mm=25,ss=55 ;
-double theta ;
-double theta_max = 30*M_PI/180.0 ;
-double omega ;
-uint64_t t ; 
+// Global variables
+GLfloat eyex = 4, eyey = 4, eyez = 4;
+GLfloat centerx = 0, centery = 0, centerz = 0;
+GLfloat upx = 0, upy = 1, upz = 0;
+bool isAxes = true, isCube = false, isPyramid = false;
+GLdouble side = 1; 
+GLdouble rot = 1; 
+
+/* Initialize OpenGL Graphics */
+void initGL() {
+    // Set "clearing" or background color
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);   // Black and opaque
+    glEnable(GL_DEPTH_TEST);   // Enable depth testing for z-culling
+}
 
 void glCircle2d(GLdouble cx,GLdouble cy,GLdouble radius,double r=1,double g=0,double b=0){
     // glBegin(GL_LINE_LOOP);  // All vertices form a single loop of single pixel width
@@ -25,129 +38,263 @@ void glCircle2d(GLdouble cx,GLdouble cy,GLdouble radius,double r=1,double g=0,do
     glEnd();
 }
 
+
+
+void drawOctahedron(){
+    GLCOLOR(PINK);
+    glBegin(GL_TRIANGLES);                      
+        glVertex3d(0.0f, 0.0f, side );         
+        glVertex3d(0.0f, side, 0.0f );         
+        glVertex3d(side , 0.0f, 0.0f );         
+    glEnd(); 
+    
+    GLCOLOR(CYAN) ; 
+    glBegin(GL_TRIANGLES);                      
+        glVertex3d( 0.0f, 0.0f, side );         
+        glVertex3d( 0.0f, side, 0.0f );         
+        glVertex3d(-side , 0.0f, 0.0f );         
+    glEnd(); 
+    
+    GLCOLOR(PINK) ; 
+    glBegin(GL_TRIANGLES);                      
+        glVertex3d( 0.0f, 0.0f, -side );         
+        glVertex3d( 0.0f, side, 0.0f );         
+        glVertex3d(-side , 0.0f, 0.0f );         
+    glEnd(); 
+    
+    
+    GLCOLOR(CYAN) ; 
+    glBegin(GL_TRIANGLES);                      
+        glVertex3d( 0.0f, 0.0f, -side );         
+        glVertex3d( 0.0f, side, 0.0f );         
+        glVertex3d(side , 0.0f, 0.0f );         
+    glEnd(); 
+
+
+
+
+    GLCOLOR(CYAN);
+    glBegin(GL_TRIANGLES);                      
+        glVertex3d(0.0f, 0.0f, side );         
+        glVertex3d(0.0f, -side, 0.0f );         
+        glVertex3d(side , 0.0f, 0.0f );         
+    glEnd(); 
+    
+    GLCOLOR(PINK) ; 
+    glBegin(GL_TRIANGLES);                      
+        glVertex3d( 0.0f, 0.0f, side );         
+        glVertex3d( 0.0f, -side, 0.0f );         
+        glVertex3d(-side , 0.0f, 0.0f );         
+    glEnd(); 
+    
+    GLCOLOR(CYAN) ; 
+    glBegin(GL_TRIANGLES);                      
+        glVertex3d( 0.0f, 0.0f, -side );         
+        glVertex3d( 0.0f, -side, 0.0f );         
+        glVertex3d(-side , 0.0f, 0.0f );         
+    glEnd(); 
+    
+    
+    GLCOLOR(PINK) ; 
+    glBegin(GL_TRIANGLES);                      
+        glVertex3d( 0.0f, 0.0f, -side );         
+        glVertex3d( 0.0f, -side, 0.0f );         
+        glVertex3d(side , 0.0f, 0.0f );         
+    glEnd(); 
+}
+
+
+
+/* Draw a pyramid centered at the origin */
+void drawPyramid() {
+    glBegin(GL_TRIANGLES);           // Begin drawing the pyramid with 4 triangles
+        // Front
+        glColor3f(1.0f, 0.0f, 0.0f);     // Red
+        glVertex3f( 0.0f, 1.0f, 0.0f);
+        glColor3f(0.0f, 1.0f, 0.0f);     // Green
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+        glColor3f(0.0f, 0.0f, 1.0f);     // Blue
+        glVertex3f(1.0f, -1.0f, 1.0f);
+
+        // Right
+        glColor3f(1.0f, 0.0f, 0.0f);     // Red
+        glVertex3f(0.0f, 1.0f, 0.0f);
+        glColor3f(0.0f, 0.0f, 1.0f);     // Blue
+        glVertex3f(1.0f, -1.0f, 1.0f);
+        glColor3f(0.0f, 1.0f, 0.0f);     // Green
+        glVertex3f(1.0f, -1.0f, -1.0f);
+
+        // Back
+        glColor3f(1.0f, 0.0f, 0.0f);     // Red
+        glVertex3f(0.0f, 1.0f, 0.0f);
+        glColor3f(0.0f, 1.0f, 0.0f);     // Green
+        glVertex3f(1.0f, -1.0f, -1.0f);
+        glColor3f(0.0f, 0.0f, 1.0f);     // Blue
+        glVertex3f(-1.0f, -1.0f, -1.0f);
+
+        // Left
+        glColor3f(1.0f,0.0f,0.0f);       // Red
+        glVertex3f( 0.0f, 1.0f, 0.0f);
+        glColor3f(0.0f,0.0f,1.0f);       // Blue
+        glVertex3f(-1.0f,-1.0f,-1.0f);
+        glColor3f(0.0f,1.0f,0.0f);       // Green
+        glVertex3f(-1.0f,-1.0f, 1.0f);
+    glEnd();   // Done drawing the pyramid
+}
+
+
 void displayMe(void)
 {
-    glClear(GL_COLOR_BUFFER_BIT);
-    
-    double cx=0.0,cy=0.5,r1=0.3,r2=0.4;
-    double hline_x,hline_y,mline_x,mline_y,sline_x,sline_y ;
-    double mline_len=r1;
-    double hline_len=0.2;
-    double sline_len=0.35 ; 
-
-    hline_x = cx + hline_len* cos ( (3-hh)*30*M_PI/180 ) ;
-    hline_y = cy + hline_len* sin ( (3-hh)*30*M_PI/180 ) ;
-
-    mline_x = cx + mline_len* cos ( (15-mm)*6*M_PI/180 ) ;
-    mline_y = cy + mline_len* sin ( (15-mm)*6*M_PI/180 ) ;
-
-    sline_x = cx + sline_len* cos ( (15-ss)*6*M_PI/180 ) ;
-    sline_y = cy + sline_len* sin ( (15-ss)*6*M_PI/180 ) ;
-
-
-    omega = M_PI/1000.0 ;
-    theta = theta_max * cos(omega*(double)t) - M_PI/2.0;
-
-    glCircle2d(cx,cy,r2,1,1,1) ;
-    glCircle2d(cx,cy,r1,0,1,0);
-
-    glBegin(GL_LINES);  // Each set of 2 vertices form a line of single pixel width
-        glColor3f(0.0f,1.0f,1.0f);  // Whit
-        glVertex2d(cx, cy);
-        glVertex2d(hline_x,hline_y);
-    glEnd();
-    glBegin(GL_LINES) ;
-        glColor3f(0.0f,0.0f,1.0f);  // Blue
-        glVertex2d(sline_x,sline_y);
-        glVertex2d( cx,cy);
-    glEnd();
-    glBegin(GL_LINES) ;
-        glColor3f(1.0f,.0f,1.0f);  // Whit
-        glVertex2d(cx, cy);
-        glVertex2d(mline_x,mline_y);
-    glEnd();
-
-
-    glBegin(GL_LINES) ;
-        glColor3f(0.0f,0.0f,1.0f);  // Blue
-        glVertex2d(cx,cy-r2);
-        glVertex2d(cx+r1*cos( theta),cy-r2+r1*sin(theta));
-    glEnd();
-    glCircle2d(cx+r1*cos( theta),cy-r2+r1*sin(theta),0.02,0,0,1);
-
-    glFlush();
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glMatrixMode(GL_MODELVIEW);             // To operate on Model-View matrix
+    glLoadIdentity();                       // Reset the model-view matrix
+    // glRotatef(rot,0.0,1.0,0.0);
+    gluLookAt(eyex,eyey,eyez,
+              centerx,centery,centerz,
+              upx,upy,upz);
+    drawOctahedron();   
+    // drawPyramid();
+    glutSwapBuffers(); 
 }
 
-/* Called back when there is no other event to be handled */
-// void idle() {
-// //    t = time(0) ;
-//    tm *ltm = localtime(&t);
-//    hh=ltm->tm_hour;
-//    mm=ltm->tm_min;
-//    ss=ltm->tm_sec;
-//    glutPostRedisplay();
-// }
-void timer(int extra)
-{ 
-    // t = time(0) ;
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
-    // cout<<ms.count()<<endl;
-    // cout<<t<<endl;
-    t = ms.count();
-    time_t tt = ms.count()/1000;
-    tm *ltm = localtime(&tt);
-    hh=ltm->tm_hour;
-    mm=ltm->tm_min;
-    ss=ltm->tm_sec;
-    glutPostRedisplay();
-    glutTimerFunc(10, timer, 0);
-}
 
 /* Callback handler for normal-key event */
-void keyboard(unsigned char key, int x, int y) {
-    // key is the char pressed, e.g., 'a' or 27 for ESC
-    // // (x, y) is the mouse location in Windows' coordinates
-    // switch (key) {
-    // case 'a':
-    //     px -= 0.1;
-    //     break;
-    // case 'd':
-    //     px += 0.1;
-    
-    // default:
-    //     break;
-    // }
-    // glutPostRedisplay();
+void keyboardListener(unsigned char key, int x, int y) {
+    float v = 0.1;
+    switch (key) {
+    // Control eye (location of the eye)
+    // control eyex
+    case '1':
+        eyex += v;
+        break;
+    case '2':
+        eyex -= v;
+        break;
+    // control eyey
+    case '3':
+        eyey += v;
+        break;
+    case '4':
+        eyey -= v;
+        break;
+    // control eyez
+    case '5':
+        eyez += v;
+        break;
+    case '6':
+        eyez -= v;
+        break;
+
+    // Control center (location where the eye is looking at)
+    // control centerx
+    case 'q':
+        centerx += v;
+        break;
+    case 'w':
+        centerx -= v;
+        break;
+    // control centery
+    case 'e':
+        centery += v;
+        break;
+    case 'r':
+        centery -= v;
+        break;
+    // control centerz
+    case 't':
+        centerz += v;
+        break;
+    case 'y':
+        centerz -= v;
+        break;
+
+    // Control what is shown
+    case 'a':
+        isAxes = !isAxes;   // show/hide Axes if 'a' is pressed
+        break;
+    case 'c':
+        isCube = !isCube;   // show/hide Cube if 'c' is pressed
+        break;
+    case 'p':
+        isPyramid = !isPyramid; // show/hide Pyramid if 'p' is pressed
+        break;
+
+    // Control exit
+    case 27:    // ESC key
+        exit(0);    // Exit window
+        break;
+    }
+    glutPostRedisplay();    // Post a paint request to activate display()
 }
 
 /* Callback handler for special-key event */
-void special(int key, int x, int y) {
-    // specialKey: GLUT_KEY_* (* for LEFT, RIGHT, UP, DOWN, HOME, END, PAGE_UP, PAGE_DOWN, F1,...F12). 
-    // // (x, y) is the mouse location in Windows' coordinates
-    // switch(key) {
-    // case GLUT_KEY_LEFT:
-    //     mm -= 1;
-    //     break;
-    // case GLUT_KEY_RIGHT:
-    //     mm += 1;
-    //     break;
-    // }
-    // glutPostRedisplay();
+void specialKeyListener(int key, int x,int y) {
+    double v = 0.25;
+    double lx = centerx - eyex;
+    double lz = centerz - eyez;
+    double s;
+    switch (key) {
+    case GLUT_KEY_LEFT:
+        eyex += v * (upy*lz);
+        eyez += v * (-lx*upy);
+        s = sqrt(eyex*eyex + eyez*eyez) / (4 * sqrt(2));
+        eyex /= s;
+        eyez /= s;
+        break;
+    case GLUT_KEY_RIGHT:
+        eyex += v * (-upy*lz);
+        eyez += v * (lx*upy);
+        s = sqrt(eyex*eyex + eyez*eyez) / (4 * sqrt(2));
+        eyex /= s;
+        eyez /= s;
+        break;
+    case GLUT_KEY_UP:
+        eyey += v;
+        break;
+    case GLUT_KEY_DOWN:
+        eyey -= v;
+        break;
+    
+    default:
+        return;
+    }
+    glutPostRedisplay();    // Post a paint request to activate display()
 }
 
+void reshapeListener(GLsizei width, GLsizei height) {  // GLsizei for non-negative integer
+    // Compute aspect ratio of the new window
+    if (height == 0) height = 1;                // To prevent divide by 0
+    GLfloat aspect = (GLfloat)width / (GLfloat)height;
 
+    // Set the viewport to cover the new window
+    glViewport(0, 0, width, height);
+
+    // Set the aspect ratio of the clipping area to match the viewport
+    glMatrixMode(GL_PROJECTION);  // To operate on the Projection matrix
+    glLoadIdentity();             // Reset the projection matrix
+    /*if (width >= height) {
+        // aspect >= 1, set the height from -1 to 1, with larger width
+        gluOrtho2D(-1.0 * aspect, 1.0 * aspect, -1.0, 1.0);
+    } else {
+        // aspect < 1, set the width to -1 to 1, with larger height
+        gluOrtho2D(-1.0, 1.0, -1.0 / aspect, 1.0 / aspect);
+    }*/
+    // Enable perspective projection with fovy, aspect, zNear and zFar
+    gluPerspective(45.0f, aspect, 0.1f, 100.0f);
+}
 int main(int argc, char** argv)
 {
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_SINGLE);
+    // glutInitDisplayMode(GLUT_SINGLE);
     glutInitWindowSize(1024, 1024);
     glutInitWindowPosition(100, 100);
-    glutCreateWindow("Clock");
+	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGB);	//Depth, Double buffer, RGB color
+    glutCreateWindow("Cube");
     glutDisplayFunc(displayMe);
-    glutTimerFunc(0, timer, 0);
-    // glutIdleFunc(idle);                
-    glutSpecialFunc(special);
-    glutKeyboardFunc(keyboard);
+    glutReshapeFunc(reshapeListener);           // Register callback handler for window re-shape
+    glutSpecialFunc(specialKeyListener);
+    glutKeyboardFunc(keyboardListener);
+    initGL();
     glutMainLoop();
     return 0;
 }
