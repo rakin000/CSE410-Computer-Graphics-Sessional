@@ -3,6 +3,7 @@
 #include <ctime>
 #include <chrono>
 #include <iostream> 
+#include <bits/stdc++.h>
 
 using namespace std ;
 
@@ -17,6 +18,8 @@ struct Color{
     
 #define GLCOLOR(color) glColor3f(color.R,color.G,color.B)
 #define TO_RADIAN(deg) ((deg)*(M_PI/180.0))
+#define DEG2RAD (M_PI/180.0) 
+
 // Global variables
 GLfloat eyex = 4, eyey = 4, eyez = 4;
 GLfloat centerx = 0, centery = 0, centerz = 0;
@@ -24,7 +27,7 @@ GLfloat upx = 0, upy = 1, upz = 0;
 bool isAxes = true, isCube = false, isPyramid = false;
 GLdouble side = 1; 
 GLdouble rot = 1; 
-GLdouble growSphere = 0.30 ;
+GLdouble growSphere = 30 ;
 /* Initialize OpenGL Graphics */
 void initGL() {
     // Set "clearing" or background color
@@ -192,7 +195,7 @@ void drawAxes() {
     glEnd();
 }
 
-void draw(){
+void draw2(){
     GLdouble theta,phi ;
     GLdouble x,y,z; 
     GLdouble cz=0,cy=0,cx=0,radius=1;
@@ -337,6 +340,92 @@ void draw(){
     }
 }
 
+void draw(){
+    GLdouble theta,phi ;
+    GLdouble x,y,z; 
+    GLdouble cz=0,cy=0,cx=0,radius=1;
+    z = cz+radius * cos( TO_RADIAN(phi) ) ;
+    y = cy + radius * sin( TO_RADIAN(phi) ) * sin( TO_RADIAN(theta) ) ;
+    x = cx + radius * sin( TO_RADIAN(phi) ) * cos( TO_RADIAN(theta) ) ;
+
+
+
+    std::vector<float> vertices;
+    float n1[3];        // normal of longitudinal plane rotating along Y-axis
+    float n2[3];        // normal of latitudinal plane rotating along Z-axis
+    float v[3];         // direction vector intersecting 2 planes, n1 x n2
+    float a1;           // longitudinal angle along Y-axis
+    float a2;  
+
+    // int pointsPerRow = (int)pow(2, subdivision) + 1;
+
+    int pointsPerRow = (int)pow(2, 5) + 1;
+    // rotate latitudinal plane from 45 to -45 degrees along Z-axis (top-to-bottom)
+    for(unsigned int i = 0; i < pointsPerRow; ++i)
+    {
+        // normal for latitudinal plane
+        // if latitude angle is 0, then normal vector of latitude plane is n2=(0,1,0)
+        // therefore, it is rotating (0,1,0) vector by latitude angle a2
+        // a2 = DEG2RAD * (45.0f - 90.0f * i / (pointsPerRow - 1));
+        a2 = DEG2RAD * (growSphere - 2.0*growSphere * i / (pointsPerRow - 1));
+        n2[0] = -sin(a2);
+        n2[1] = cos(a2);
+        n2[2] = 0;
+
+        // rotate longitudinal plane from -45 to 45 along Y-axis (left-to-right)
+        for(unsigned int j = 0; j < pointsPerRow; ++j)
+        {
+            // normal for longitudinal plane
+            // if longitude angle is 0, then normal vector of longitude is n1=(0,0,-1)
+            // therefore, it is rotating (0,0,-1) vector by longitude angle a1
+            // a1 = DEG2RAD * (-45.0f + 90.0f * j / (pointsPerRow - 1));
+            a1 = DEG2RAD * (-growSphere + 2.0 * growSphere * j / (pointsPerRow - 1));
+            n1[0] = -sin(a1);
+            n1[1] = 0;
+            n1[2] = -cos(a1);
+
+            // find direction vector of intersected line, n1 x n2
+            v[0] = n1[1] * n2[2] - n1[2] * n2[1];
+            v[1] = n1[2] * n2[0] - n1[0] * n2[2];
+            v[2] = n1[0] * n2[1] - n1[1] * n2[0];
+
+            // normalize direction vector
+            float scale = 1 / sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+            v[0] *= scale;
+            v[1] *= scale;
+            v[2] *= scale;
+
+            // add a vertex into array
+            vertices.push_back(v[0]);
+            vertices.push_back(v[1]);
+            vertices.push_back(v[2]);
+        }
+    }
+
+
+    // GLCOLOR(RED);
+    glBegin(GL_QUAD_STRIP);
+    for(int i=0;i< pointsPerRow -1  ;i++){
+        for(int j=0;j<pointsPerRow;j++){
+            int id = i*pointsPerRow+j ;
+            id*=3; 
+            glVertex3d(vertices[id],vertices[id+1],vertices[id+2]);
+            id = (i+1)*pointsPerRow+j;
+            id*=3;
+            glVertex3d(vertices[id],vertices[id+1],vertices[id+2]);
+        }
+    }
+    glEnd();
+
+}
+
+void drawdouble(){
+    draw();
+    glPushMatrix();
+        glRotatef(180,0,1,0);
+        draw();
+    glPopMatrix();
+}
 
 void displayMe(void)
 {
@@ -351,17 +440,18 @@ void displayMe(void)
     // drawPyramid();
     // drawSphere(1.0,0.0,0.0,0.0);
     drawAxes();
-    draw();
-    // glPushMatrix();
-    //     glRotatef(90,0,1,0);
-    //     GLCOLOR(GREEN) ;
-    //     draw();
-    // glPopMatrix();
-    // glPushMatrix();
-    //     glRotatef(90,1,0,0);
-    //     GLCOLOR(BLUE);
-    //     draw();
-    // glPopMatrix();
+    GLCOLOR(RED) ;
+    drawdouble();
+    glPushMatrix();
+        glRotatef(90,0,1,0);
+        GLCOLOR(GREEN) ;
+        drawdouble();
+    glPopMatrix();
+    glPushMatrix();
+        glRotatef(90,0,0,1);
+        GLCOLOR(BLUE);
+        drawdouble();
+    glPopMatrix();
     glutSwapBuffers(); 
 }
 
@@ -427,12 +517,12 @@ void keyboardListener(unsigned char key, int x, int y) {
         isPyramid = !isPyramid; // show/hide Pyramid if 'p' is pressed
         break;
     case '0' :
-        growSphere += 0.1;
-        growSphere = (growSphere > 1.0) ? 1.0:growSphere ;
+        growSphere += 5;
+        growSphere = (growSphere > 45) ? 45:growSphere ;
         break;
     case '9':
-        growSphere -= 0.1;
-        growSphere = (growSphere <= 0.0) ? 0.0:growSphere ;
+        growSphere -= 5;
+        growSphere = (growSphere <= 0.0) ? 0:growSphere ;
         break;
     // Control exit
     case 27:    // ESC key
