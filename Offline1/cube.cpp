@@ -24,7 +24,7 @@ GLfloat upx = 0, upy = 1, upz = 0;
 bool isAxes = true, isCube = false, isPyramid = false;
 GLdouble side = 1; 
 GLdouble rot = 1; 
-GLdouble growSphere = 30 ;
+GLdouble growSphere = 0.30 ;
 /* Initialize OpenGL Graphics */
 void initGL() {
     // Set "clearing" or background color
@@ -179,16 +179,16 @@ void drawAxes() {
         glColor3f(1,0,0);   // Red
         // X axis
         glVertex3f(0,0,0);
-        glVertex3f(1,0,0);
+        glVertex3f(2,0,0);
 
         glColor3f(0,1,0);   // Green
         // Y axis
         glVertex3f(0,0,0);        glVertex3f(0,1,0);
 
-        glColor3f(0,0,1);   // Blue
+        glColor3f(0,0,2);   // Blue
         // Z axis
         glVertex3f(0,0,0);
-        glVertex3f(0,0,1);
+        glVertex3f(0,0,2);
     glEnd();
 }
 
@@ -199,40 +199,141 @@ void draw(){
     z = cz+radius * cos( TO_RADIAN(phi) ) ;
     y = cy + radius * sin( TO_RADIAN(phi) ) * sin( TO_RADIAN(theta) ) ;
     x = cx + radius * sin( TO_RADIAN(phi) ) * cos( TO_RADIAN(theta) ) ;
-    for(phi=180;phi>180-growSphere;phi-=5){
-        glBegin(GL_QUAD_STRIP);
-        for(theta=0;theta<=360;theta+=5){
-            // GLCOLOR(CYAN);
-            z = cz+radius * cos( TO_RADIAN(phi) ) ;
-            y = cy+radius * sin( TO_RADIAN(phi) ) * sin( TO_RADIAN(theta) ) ;
-            x = cx+radius * sin( TO_RADIAN(phi) ) * cos( TO_RADIAN(theta) ) ;
-            glVertex3d(x,y,z) ;
+    // for(phi=180;phi>180-growSphere;phi-=5){
+    //     glBegin(GL_QUAD_STRIP);
+    //     for(theta=0;theta<=360;theta+=5){
+    //         // GLCOLOR(CYAN);
+    //         z = cz+radius * cos( TO_RADIAN(phi) ) ;
+    //         y = cy+radius * sin( TO_RADIAN(phi) ) * sin( TO_RADIAN(theta) ) ;
+    //         x = cx+radius * sin( TO_RADIAN(phi) ) * cos( TO_RADIAN(theta) ) ;
+    //         glVertex3d(x,y,z) ;
             
-            // GLCOLOR(PINK);
-            z = cz+radius * cos( TO_RADIAN(phi-5) ) ;
-            y = cy + radius * sin( TO_RADIAN(phi-5) ) * sin( TO_RADIAN(theta) ) ;
-            x = cx + radius * sin( TO_RADIAN(phi-5) ) * cos( TO_RADIAN(theta) ) ;
-            glVertex3d(x,y,z) ;
-        }
-        glEnd();
-    }    
-    for(phi=0;phi<growSphere;phi+=5){
-        glBegin(GL_QUAD_STRIP);
-        for(theta=0;theta<=360;theta+=5){        
-            // GLCOLOR(CYAN);
-            z = cz+radius * cos( TO_RADIAN(phi) ) ;
-            y = cy+radius * sin( TO_RADIAN(phi) ) * sin( TO_RADIAN(theta) ) ;
-            x = cx+radius * sin( TO_RADIAN(phi) ) * cos( TO_RADIAN(theta) ) ;
-            glVertex3d(x,y,z) ;
+    //         // GLCOLOR(PINK);
+    //         z = cz+radius * cos( TO_RADIAN(phi-5) ) ;
+    //         y = cy + radius * sin( TO_RADIAN(phi-5) ) * sin( TO_RADIAN(theta) ) ;
+    //         x = cx + radius * sin( TO_RADIAN(phi-5) ) * cos( TO_RADIAN(theta) ) ;
+    //         glVertex3d(x,y,z) ;
+    //     }
+    //     glEnd();
+    // }    
+    // for(phi=0;phi<growSphere;phi+=5){
+    //     glBegin(GL_QUAD_STRIP);
+    //     for(theta=0;theta<=360;theta+=5){        
+    //         // GLCOLOR(CYAN);
+    //         z = cz+radius * cos( TO_RADIAN(phi) ) ;
+    //         y = cy+radius * sin( TO_RADIAN(phi) ) * sin( TO_RADIAN(theta) ) ;
+    //         x = cx+radius * sin( TO_RADIAN(phi) ) * cos( TO_RADIAN(theta) ) ;
+    //         glVertex3d(x,y,z) ;
             
-            // GLCOLOR(PINK);
-            z = cz+radius * cos( TO_RADIAN(phi+5) ) ;
-            y = cy + radius * sin( TO_RADIAN(phi+5) ) * sin( TO_RADIAN(theta) ) ;
-            x = cx + radius * sin( TO_RADIAN(phi+5) ) * cos( TO_RADIAN(theta) ) ;
-            glVertex3d(x,y,z) ;
+    //         // GLCOLOR(PINK);
+    //         z = cz+radius * cos( TO_RADIAN(phi+5) ) ;
+    //         y = cy + radius * sin( TO_RADIAN(phi+5) ) * sin( TO_RADIAN(theta) ) ;
+    //         x = cx + radius * sin( TO_RADIAN(phi+5) ) * cos( TO_RADIAN(theta) ) ;
+    //         glVertex3d(x,y,z) ;
 
+    //     }
+    //     glEnd();
+    // }
+
+    // GLdouble dPhi = 5;; 
+    // GLdouble dTheta = 5 ;
+    // for(phi=-growSphere;phi<growSphere;phi+=dPhi ){
+    //     glBegin(GL_QUAD_STRIP);
+    //     for(theta=-growSphere;theta<growSphere;theta+=dTheta){
+    //         z = cz+radius * cos( TO_RADIAN(phi) ) ;
+    //         y = cy+radius * sin( TO_RADIAN(phi) ) * sin( TO_RADIAN(theta) ) ;
+    //         x = cx+radius * sin( TO_RADIAN(phi) ) * cos( TO_RADIAN(theta) ) ;
+    //         glVertex3d(x,y,z) ;
+            
+    //         // GLCOLOR(PINK);
+    //         z = cz+radius * cos( TO_RADIAN(phi+5) ) ;
+    //         y = cy + radius * sin( TO_RADIAN(phi+5) ) * sin( TO_RADIAN(theta) ) ;
+    //         x = cx + radius * sin( TO_RADIAN(phi+5) ) * cos( TO_RADIAN(theta) ) ;
+    //         glVertex3d(x,y,z) ;
+
+ 
+    //     }
+    //     glEnd();
+    // }
+
+    GLdouble dx = 0.1,dy,dz;
+    GLCOLOR(RED);
+    for(dx=0.1,x=-growSphere;x<growSphere;x+=dx){
+        glBegin(GL_QUAD_STRIP);
+        for(dy=0.1,y=-growSphere;y<=growSphere;y+=dy){
+            z = sqrt(radius*radius-x*x-y*y) ;
+            glVertex3d(x,y,z) ;
+            x += dx; 
+            z = sqrt(radius*radius-x*x-y*y) ;
+            glVertex3d(x,y,z) ;
+            x -= dx ;
         }
         glEnd();
+
+        glBegin(GL_QUAD_STRIP);
+        for(dy=0.1,y=-growSphere;y<=growSphere;y+=dy){
+            z = -sqrt(radius*radius-x*x-y*y) ;
+            glVertex3d(x,y,z) ;
+            x += dx; 
+            z = -sqrt(radius*radius-x*x-y*y) ;
+            glVertex3d(x,y,z) ;
+            x -= dx ;
+        }
+        glEnd();
+
+
+        
+    }
+
+    GLCOLOR(GREEN);
+    for(dx=0.1,x=-growSphere;x<growSphere;x+=dx){
+        glBegin(GL_QUAD_STRIP);
+        for(dz=0.1,z=-growSphere;z<=growSphere;z+=dz){
+            y = sqrt(radius*radius-x*x-z*z) ;
+            glVertex3d(x,y,z) ;
+            x += dx; 
+            y = sqrt(radius*radius-x*x-z*z) ;
+            glVertex3d(x,y,z) ;
+            x -= dx ;
+        }
+        glEnd();
+        
+        glBegin(GL_QUAD_STRIP);
+        for(dz=0.1,z=-growSphere;z<=growSphere;z+=dz){
+            y = -sqrt(radius*radius-x*x-z*z) ;
+            glVertex3d(x,y,z) ;
+            x += dx; 
+            y = -sqrt(radius*radius-x*x-z*z) ;
+            glVertex3d(x,y,z) ;
+            x -= dx ;
+        }
+        glEnd();
+    }
+
+    GLCOLOR(BLUE);
+    for(dy=0.1,y=-growSphere;y<growSphere;y+=dy){
+        glBegin(GL_QUAD_STRIP);
+        for(dz=0.1,z=-growSphere;z<=growSphere;z+=dz){
+            x = sqrt(radius*radius-y*y-z*z) ;
+            glVertex3d(x,y,z) ;
+            y += dy; 
+            x = sqrt(radius*radius-y*y-z*z) ;
+            glVertex3d(x,y,z) ;
+            y -= dy ;
+        }
+        glEnd();
+
+        glBegin(GL_QUAD_STRIP);
+        for(dz=0.1,z=-growSphere;z<=growSphere;z+=dz){
+            x = -sqrt(radius*radius-y*y-z*z) ;
+            glVertex3d(x,y,z) ;
+            y += dy; 
+            x = -sqrt(radius*radius-y*y-z*z) ;
+            glVertex3d(x,y,z) ;
+            y -= dy ;
+        }
+        glEnd();
+
     }
 }
 
@@ -250,18 +351,17 @@ void displayMe(void)
     // drawPyramid();
     // drawSphere(1.0,0.0,0.0,0.0);
     drawAxes();
-    GLCOLOR(RED);
     draw();
-    glPushMatrix();
-        glRotatef(90,0,1,0);
-        GLCOLOR(GREEN) ;
-        draw();
-    glPopMatrix();
-    glPushMatrix();
-        glRotatef(90,1,0,0);
-        GLCOLOR(BLUE);
-        draw();
-    glPopMatrix();
+    // glPushMatrix();
+    //     glRotatef(90,0,1,0);
+    //     GLCOLOR(GREEN) ;
+    //     draw();
+    // glPopMatrix();
+    // glPushMatrix();
+    //     glRotatef(90,1,0,0);
+    //     GLCOLOR(BLUE);
+    //     draw();
+    // glPopMatrix();
     glutSwapBuffers(); 
 }
 
@@ -327,10 +427,12 @@ void keyboardListener(unsigned char key, int x, int y) {
         isPyramid = !isPyramid; // show/hide Pyramid if 'p' is pressed
         break;
     case '0' :
-        growSphere += 5;
+        growSphere += 0.1;
+        growSphere = (growSphere > 1.0) ? 1.0:growSphere ;
         break;
     case '9':
-        growSphere -= 5;
+        growSphere -= 0.1;
+        growSphere = (growSphere <= 0.0) ? 0.0:growSphere ;
         break;
     // Control exit
     case 27:    // ESC key
