@@ -8,9 +8,15 @@ using namespace std ;
 
 struct Color{
     GLfloat R,G,B ;
-} PINK = { 235/255.0, 52/255.0, 186/255.0},CYAN = {52/255.0, 201/255.0, 235/255.0};
-#define GLCOLOR(color) glColor3f(color.R,color.G,color.B);
+}   PINK = { 235/255.0, 52/255.0, 186/255.0},
+    CYAN = {52/255.0, 201/255.0, 235/255.0},
+    RED = {1,0,0},
+    BLUE = {0,0,1},
+    GREEN = {0,1,0} ;
 
+    
+#define GLCOLOR(color) glColor3f(color.R,color.G,color.B)
+#define TO_RADIAN(deg) ((deg)*(M_PI/180.0))
 // Global variables
 GLfloat eyex = 4, eyey = 4, eyez = 4;
 GLfloat centerx = 0, centery = 0, centerz = 0;
@@ -18,7 +24,7 @@ GLfloat upx = 0, upy = 1, upz = 0;
 bool isAxes = true, isCube = false, isPyramid = false;
 GLdouble side = 1; 
 GLdouble rot = 1; 
-
+GLdouble growSphere = 30 ;
 /* Initialize OpenGL Graphics */
 void initGL() {
     // Set "clearing" or background color
@@ -142,6 +148,94 @@ void drawPyramid() {
     glEnd();   // Done drawing the pyramid
 }
 
+void drawSphere(GLdouble radius,GLdouble cx,GLdouble cy,GLdouble cz){
+    GLdouble theta,phi ;
+    GLdouble x,y,z; 
+    z = cz+radius * cos( TO_RADIAN(phi) ) ;
+    y = cy + radius * sin( TO_RADIAN(phi) ) * sin( TO_RADIAN(theta) ) ;
+    x = cx + radius * sin( TO_RADIAN(phi) ) * cos( TO_RADIAN(theta) ) ;
+    for(phi=180;phi>0;phi-=5){
+        glBegin(GL_QUAD_STRIP);
+        for(theta=0;theta<=360;theta+=5){
+            GLCOLOR(CYAN);
+            z = cz+radius * cos( TO_RADIAN(phi) ) ;
+            y = cy+radius * sin( TO_RADIAN(phi) ) * sin( TO_RADIAN(theta) ) ;
+            x = cx+radius * sin( TO_RADIAN(phi) ) * cos( TO_RADIAN(theta) ) ;
+            glVertex3d(x,y,z) ;
+            
+            GLCOLOR(PINK);
+            z = cz+radius * cos( TO_RADIAN(phi-5) ) ;
+            y = cy + radius * sin( TO_RADIAN(phi-5) ) * sin( TO_RADIAN(theta) ) ;
+            x = cx + radius * sin( TO_RADIAN(phi-5) ) * cos( TO_RADIAN(theta) ) ;
+            glVertex3d(x,y,z) ;
+        }
+        glEnd();
+    }
+}
+
+void drawAxes() {
+    glLineWidth(3);
+    glBegin(GL_LINES);
+        glColor3f(1,0,0);   // Red
+        // X axis
+        glVertex3f(0,0,0);
+        glVertex3f(1,0,0);
+
+        glColor3f(0,1,0);   // Green
+        // Y axis
+        glVertex3f(0,0,0);        glVertex3f(0,1,0);
+
+        glColor3f(0,0,1);   // Blue
+        // Z axis
+        glVertex3f(0,0,0);
+        glVertex3f(0,0,1);
+    glEnd();
+}
+
+void draw(){
+    GLdouble theta,phi ;
+    GLdouble x,y,z; 
+    GLdouble cz=0,cy=0,cx=0,radius=1;
+    z = cz+radius * cos( TO_RADIAN(phi) ) ;
+    y = cy + radius * sin( TO_RADIAN(phi) ) * sin( TO_RADIAN(theta) ) ;
+    x = cx + radius * sin( TO_RADIAN(phi) ) * cos( TO_RADIAN(theta) ) ;
+    for(phi=180;phi>180-growSphere;phi-=5){
+        glBegin(GL_QUAD_STRIP);
+        for(theta=0;theta<=360;theta+=5){
+            // GLCOLOR(CYAN);
+            z = cz+radius * cos( TO_RADIAN(phi) ) ;
+            y = cy+radius * sin( TO_RADIAN(phi) ) * sin( TO_RADIAN(theta) ) ;
+            x = cx+radius * sin( TO_RADIAN(phi) ) * cos( TO_RADIAN(theta) ) ;
+            glVertex3d(x,y,z) ;
+            
+            // GLCOLOR(PINK);
+            z = cz+radius * cos( TO_RADIAN(phi-5) ) ;
+            y = cy + radius * sin( TO_RADIAN(phi-5) ) * sin( TO_RADIAN(theta) ) ;
+            x = cx + radius * sin( TO_RADIAN(phi-5) ) * cos( TO_RADIAN(theta) ) ;
+            glVertex3d(x,y,z) ;
+        }
+        glEnd();
+    }    
+    for(phi=0;phi<growSphere;phi+=5){
+        glBegin(GL_QUAD_STRIP);
+        for(theta=0;theta<=360;theta+=5){        
+            // GLCOLOR(CYAN);
+            z = cz+radius * cos( TO_RADIAN(phi) ) ;
+            y = cy+radius * sin( TO_RADIAN(phi) ) * sin( TO_RADIAN(theta) ) ;
+            x = cx+radius * sin( TO_RADIAN(phi) ) * cos( TO_RADIAN(theta) ) ;
+            glVertex3d(x,y,z) ;
+            
+            // GLCOLOR(PINK);
+            z = cz+radius * cos( TO_RADIAN(phi+5) ) ;
+            y = cy + radius * sin( TO_RADIAN(phi+5) ) * sin( TO_RADIAN(theta) ) ;
+            x = cx + radius * sin( TO_RADIAN(phi+5) ) * cos( TO_RADIAN(theta) ) ;
+            glVertex3d(x,y,z) ;
+
+        }
+        glEnd();
+    }
+}
+
 
 void displayMe(void)
 {
@@ -152,8 +246,22 @@ void displayMe(void)
     gluLookAt(eyex,eyey,eyez,
               centerx,centery,centerz,
               upx,upy,upz);
-    drawOctahedron();   
+    // drawOctahedron();   
     // drawPyramid();
+    // drawSphere(1.0,0.0,0.0,0.0);
+    drawAxes();
+    GLCOLOR(RED);
+    draw();
+    glPushMatrix();
+        glRotatef(90,0,1,0);
+        GLCOLOR(GREEN) ;
+        draw();
+    glPopMatrix();
+    glPushMatrix();
+        glRotatef(90,1,0,0);
+        GLCOLOR(BLUE);
+        draw();
+    glPopMatrix();
     glutSwapBuffers(); 
 }
 
@@ -218,7 +326,12 @@ void keyboardListener(unsigned char key, int x, int y) {
     case 'p':
         isPyramid = !isPyramid; // show/hide Pyramid if 'p' is pressed
         break;
-
+    case '0' :
+        growSphere += 5;
+        break;
+    case '9':
+        growSphere -= 5;
+        break;
     // Control exit
     case 27:    // ESC key
         exit(0);    // Exit window
