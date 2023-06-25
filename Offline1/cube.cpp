@@ -28,6 +28,14 @@ bool isAxes = true, isCube = false, isPyramid = false;
 GLdouble side = 1; 
 GLdouble rot = 1; 
 GLdouble growSphere = 30 ;
+const int pointsPerRow = 1<<4 ;
+// vector<vector<vector<GLdouble> > > verticesX(pointsPerRow, vector<vector<GLdouble>> (pointsPerRow, vector<GLdouble> (3))),
+//                                    verticesY(pointsPerRow, vector<vector<GLdouble>> (pointsPerRow, vector<GLdouble> (3))),
+//                                    verticesZ(pointsPerRow, vector<vector<GLdouble>> (pointsPerRow, vector<GLdouble> (3))) ;
+GLdouble verticesX[pointsPerRow][pointsPerRow][3];
+GLdouble verticesY[pointsPerRow][pointsPerRow][3];
+GLdouble verticesZ[pointsPerRow][pointsPerRow][3];
+
 /* Initialize OpenGL Graphics */
 void initGL() {
     // Set "clearing" or background color
@@ -340,6 +348,114 @@ void draw2(){
     }
 }
 
+
+void generateVertices(){
+    float n1[3];        // normal of longitudinal plane rotating along Y-axis
+    float n2[3];        // normal of latitudinal plane rotating along Z-axis
+    float v[3];         // direction vector intersecting 2 planes, n1 x n2
+    float a1;           // longitudinal angle along Y-axis
+    float a2;  
+    // rotate latitudinal plane from 45 to -45 degrees along Z-axis (top-to-bottom)
+    for(unsigned int i = 0; i < pointsPerRow; ++i){
+        a2 = DEG2RAD * (growSphere - 2.0*growSphere * i / (pointsPerRow - 1));
+        n2[0] = -sin(a2);
+        n2[1] = cos(a2);
+        n2[2] = 0;
+        // rotate longitudinal plane from -45 to 45 along Y-axis (left-to-right)
+        for(unsigned int j = 0; j < pointsPerRow; ++j){
+            a1 = DEG2RAD * (-growSphere + 2.0 * growSphere * j / (pointsPerRow - 1));
+            n1[0] = -sin(a1);
+            n1[1] = 0;
+            n1[2] = -cos(a1);
+
+            // find direction vector of intersected line, n1 x n2
+            v[0] = n1[1] * n2[2] - n1[2] * n2[1];
+            v[1] = n1[2] * n2[0] - n1[0] * n2[2];
+            v[2] = n1[0] * n2[1] - n1[1] * n2[0];
+
+            // normalize direction vector
+            double scale = 1 / sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+            v[0] *= scale;
+            v[1] *= scale;
+            v[2] *= scale;
+
+            // add a vertex into array
+            verticesX[i][j][0] = v[0];
+            verticesX[i][j][1] = v[1];
+            verticesX[i][j][2] = v[2];
+        }
+    }
+    // cerr<<"great success"; 
+    // generate Y+ vertices 
+    for(int i=0;i<pointsPerRow;i++){
+        a2 = DEG2RAD * (growSphere - 2.0*growSphere*i/(pointsPerRow-1.0));
+        n2[0] = cos(a2);
+        n2[1] = sin(a2);
+        n2[2] = 0;
+        for(int j=0;j<pointsPerRow;j++){
+            a1 = DEG2RAD * (growSphere - 2.0*growSphere*j/(pointsPerRow-1.0));
+            n1[0] = 0;
+            n1[1] = sin(a1); 
+            n1[2] = cos(a1);
+
+            v[0] = n1[1]*n2[2] - n1[2]*n2[1];
+            v[1] = n1[2]*n2[0] - n1[0]*n2[2];
+            v[2] = n1[0]*n2[1] - n1[1]*n2[0];
+
+            // normalize direction vector
+            double scale = 1 / sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+            v[0] *= scale;
+            v[1] *= scale;
+            v[2] *= scale;
+
+            // add a vertex into array
+            verticesY[i][j][0] = v[0];
+            verticesY[i][j][1] = v[1];
+            verticesY[i][j][2] = v[2];
+        }
+    }
+
+    // generate Z+ vertices 
+    for(int i=0;i<pointsPerRow;i++){
+        a2 = DEG2RAD * (growSphere - 2.0*growSphere*i/(pointsPerRow-1.0));
+        n2[0] = 0; 
+        n2[1] = cos(a2);
+        n2[2] = sin(a2);
+        for(int j=0;j<pointsPerRow;j++){
+            a1 = DEG2RAD * (growSphere - 2.0*growSphere*j/(pointsPerRow-1.0));
+            n1[0] = cos(a1);
+            n1[1] = 0;  
+            n1[2] = sin(a1);
+
+            v[0] = n1[1]*n2[2] - n1[2]*n2[1];
+            v[1] = n1[2]*n2[0] - n1[0]*n2[2];
+            v[2] = n1[0]*n2[1] - n1[1]*n2[0];
+
+            // normalize direction vector
+            double scale = 1 / sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+            v[0] *= scale;
+            v[1] *= scale;
+            v[2] *= scale;
+
+            // add a vertex into array
+            verticesZ[i][j][0] = v[0];
+            verticesZ[i][j][1] = v[1];
+            verticesZ[i][j][2] = v[2];
+        }
+    }
+}
+
+void drawCubeSpherePart(GLdouble vertices[pointsPerRow][pointsPerRow][3]){
+    glBegin(GL_QUAD_STRIP);
+    for(int i=0;i<pointsPerRow-1;i++){
+        for(int j=0;j<pointsPerRow;j++){
+            glVertex3d(vertices[i][j][0],vertices[i][j][1],vertices[i][j][2]);
+            glVertex3d(vertices[i+1][j][0],vertices[i+1][j][1],vertices[i+1][j][2]);
+        }
+    }
+    glEnd();
+}
+
 void draw(){
     GLdouble theta,phi ;
     GLdouble x,y,z; 
@@ -441,18 +557,27 @@ void displayMe(void)
     // drawSphere(1.0,0.0,0.0,0.0);
     // drawAxes();
     GLCOLOR(RED) ;
-    drawdouble();
-    glPushMatrix();
-        glRotatef(90,0,1,0);
-        GLCOLOR(GREEN) ;
-        drawdouble();
-    glPopMatrix();
-    glPushMatrix();
-        glRotatef(90,0,0,1);
-        GLCOLOR(BLUE);
-        drawdouble();
-    glPopMatrix();
+    // drawdouble();
+    // glPushMatrix();
+    //     glRotatef(90,0,1,0);
+    //     GLCOLOR(GREEN) ;
+    //     drawdouble();
+    // glPopMatrix();
+    // glPushMatrix();
+    //     glRotatef(90,0,0,1);
+    //     GLCOLOR(BLUE);
+    //     drawdouble();
+    // glPopMatrix();
+    generateVertices();
+    // cerr<<"success\n";
+    GLCOLOR(RED);
+    drawCubeSpherePart(verticesX);
+   
+    GLCOLOR(GREEN);
+    drawCubeSpherePart(verticesY);
 
+    GLCOLOR(BLUE);
+    drawCubeSpherePart(verticesZ);
     glutSwapBuffers(); 
 }
 
