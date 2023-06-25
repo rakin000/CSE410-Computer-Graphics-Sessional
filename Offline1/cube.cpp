@@ -439,7 +439,7 @@ void displayMe(void)
     // drawOctahedron();   
     // drawPyramid();
     // drawSphere(1.0,0.0,0.0,0.0);
-    drawAxes();
+    // drawAxes();
     GLCOLOR(RED) ;
     drawdouble();
     glPushMatrix();
@@ -452,6 +452,7 @@ void displayMe(void)
         GLCOLOR(BLUE);
         drawdouble();
     glPopMatrix();
+
     glutSwapBuffers(); 
 }
 
