@@ -44,146 +44,6 @@ void initGL() {
     glEnable(GL_DEPTH_TEST);   // Enable depth testing for z-culling
 }
 
-void glCircle2d(GLdouble cx,GLdouble cy,GLdouble radius,double r=1,double g=0,double b=0){
-    // glBegin(GL_LINE_LOOP);  // All vertices form a single loop of single pixel width
-    glBegin(GL_POLYGON);  // All vertices form a single loop of single pixel width
-        glColor3f(r,g,b);  // Light-blue
-        for (float theta = 0; theta < 360; theta += 10) {
-            float x = cx + radius * cos(theta*M_PI/180);
-            float y = cy + radius * sin(theta*M_PI/180);
-            glVertex2f(x,y);
-        }
-    glEnd();
-}
-
-
-
-void drawOctahedron(){
-    GLCOLOR(PINK);
-    glBegin(GL_TRIANGLES);                      
-        glVertex3d(0.0f, 0.0f, side );         
-        glVertex3d(0.0f, side, 0.0f );         
-        glVertex3d(side , 0.0f, 0.0f );         
-    glEnd(); 
-    
-    GLCOLOR(CYAN) ; 
-    glBegin(GL_TRIANGLES);                      
-        glVertex3d( 0.0f, 0.0f, side );         
-        glVertex3d( 0.0f, side, 0.0f );         
-        glVertex3d(-side , 0.0f, 0.0f );         
-    glEnd(); 
-    
-    GLCOLOR(PINK) ; 
-    glBegin(GL_TRIANGLES);                      
-        glVertex3d( 0.0f, 0.0f, -side );         
-        glVertex3d( 0.0f, side, 0.0f );         
-        glVertex3d(-side , 0.0f, 0.0f );         
-    glEnd(); 
-    
-    
-    GLCOLOR(CYAN) ; 
-    glBegin(GL_TRIANGLES);                      
-        glVertex3d( 0.0f, 0.0f, -side );         
-        glVertex3d( 0.0f, side, 0.0f );         
-        glVertex3d(side , 0.0f, 0.0f );         
-    glEnd(); 
-
-
-
-
-    GLCOLOR(CYAN);
-    glBegin(GL_TRIANGLES);                      
-        glVertex3d(0.0f, 0.0f, side );         
-        glVertex3d(0.0f, -side, 0.0f );         
-        glVertex3d(side , 0.0f, 0.0f );         
-    glEnd(); 
-    
-    GLCOLOR(PINK) ; 
-    glBegin(GL_TRIANGLES);                      
-        glVertex3d( 0.0f, 0.0f, side );         
-        glVertex3d( 0.0f, -side, 0.0f );         
-        glVertex3d(-side , 0.0f, 0.0f );         
-    glEnd(); 
-    
-    GLCOLOR(CYAN) ; 
-    glBegin(GL_TRIANGLES);                      
-        glVertex3d( 0.0f, 0.0f, -side );         
-        glVertex3d( 0.0f, -side, 0.0f );         
-        glVertex3d(-side , 0.0f, 0.0f );         
-    glEnd(); 
-    
-    
-    GLCOLOR(PINK) ; 
-    glBegin(GL_TRIANGLES);                      
-        glVertex3d( 0.0f, 0.0f, -side );         
-        glVertex3d( 0.0f, -side, 0.0f );         
-        glVertex3d(side , 0.0f, 0.0f );         
-    glEnd(); 
-}
-
-
-
-/* Draw a pyramid centered at the origin */
-void drawPyramid() {
-    glBegin(GL_TRIANGLES);           // Begin drawing the pyramid with 4 triangles
-        // Front
-        glColor3f(1.0f, 0.0f, 0.0f);     // Red
-        glVertex3f( 0.0f, 1.0f, 0.0f);
-        glColor3f(0.0f, 1.0f, 0.0f);     // Green
-        glVertex3f(-1.0f, -1.0f, 1.0f);
-        glColor3f(0.0f, 0.0f, 1.0f);     // Blue
-        glVertex3f(1.0f, -1.0f, 1.0f);
-
-        // Right
-        glColor3f(1.0f, 0.0f, 0.0f);     // Red
-        glVertex3f(0.0f, 1.0f, 0.0f);
-        glColor3f(0.0f, 0.0f, 1.0f);     // Blue
-        glVertex3f(1.0f, -1.0f, 1.0f);
-        glColor3f(0.0f, 1.0f, 0.0f);     // Green
-        glVertex3f(1.0f, -1.0f, -1.0f);
-
-        // Back
-        glColor3f(1.0f, 0.0f, 0.0f);     // Red
-        glVertex3f(0.0f, 1.0f, 0.0f);
-        glColor3f(0.0f, 1.0f, 0.0f);     // Green
-        glVertex3f(1.0f, -1.0f, -1.0f);
-        glColor3f(0.0f, 0.0f, 1.0f);     // Blue
-        glVertex3f(-1.0f, -1.0f, -1.0f);
-
-        // Left
-        glColor3f(1.0f,0.0f,0.0f);       // Red
-        glVertex3f( 0.0f, 1.0f, 0.0f);
-        glColor3f(0.0f,0.0f,1.0f);       // Blue
-        glVertex3f(-1.0f,-1.0f,-1.0f);
-        glColor3f(0.0f,1.0f,0.0f);       // Green
-        glVertex3f(-1.0f,-1.0f, 1.0f);
-    glEnd();   // Done drawing the pyramid
-}
-
-void drawSphere(GLdouble radius,GLdouble cx,GLdouble cy,GLdouble cz){
-    GLdouble theta,phi ;
-    GLdouble x,y,z; 
-    z = cz+radius * cos( TO_RADIAN(phi) ) ;
-    y = cy + radius * sin( TO_RADIAN(phi) ) * sin( TO_RADIAN(theta) ) ;
-    x = cx + radius * sin( TO_RADIAN(phi) ) * cos( TO_RADIAN(theta) ) ;
-    for(phi=180;phi>0;phi-=5){
-        glBegin(GL_QUAD_STRIP);
-        for(theta=0;theta<=360;theta+=5){
-            GLCOLOR(CYAN);
-            z = cz+radius * cos( TO_RADIAN(phi) ) ;
-            y = cy+radius * sin( TO_RADIAN(phi) ) * sin( TO_RADIAN(theta) ) ;
-            x = cx+radius * sin( TO_RADIAN(phi) ) * cos( TO_RADIAN(theta) ) ;
-            glVertex3d(x,y,z) ;
-            
-            GLCOLOR(PINK);
-            z = cz+radius * cos( TO_RADIAN(phi-5) ) ;
-            y = cy + radius * sin( TO_RADIAN(phi-5) ) * sin( TO_RADIAN(theta) ) ;
-            x = cx + radius * sin( TO_RADIAN(phi-5) ) * cos( TO_RADIAN(theta) ) ;
-            glVertex3d(x,y,z) ;
-        }
-        glEnd();
-    }
-}
 
 void drawAxes() {
     glLineWidth(3);
@@ -203,152 +63,6 @@ void drawAxes() {
         glVertex3f(0,0,2);
     glEnd();
 }
-
-void draw2(){
-    GLdouble theta,phi ;
-    GLdouble x,y,z; 
-    GLdouble cz=0,cy=0,cx=0,radius=1;
-    z = cz+radius * cos( TO_RADIAN(phi) ) ;
-    y = cy + radius * sin( TO_RADIAN(phi) ) * sin( TO_RADIAN(theta) ) ;
-    x = cx + radius * sin( TO_RADIAN(phi) ) * cos( TO_RADIAN(theta) ) ;
-    // for(phi=180;phi>180-growSphere;phi-=5){
-    //     glBegin(GL_QUAD_STRIP);
-    //     for(theta=0;theta<=360;theta+=5){
-    //         // GLCOLOR(CYAN);
-    //         z = cz+radius * cos( TO_RADIAN(phi) ) ;
-    //         y = cy+radius * sin( TO_RADIAN(phi) ) * sin( TO_RADIAN(theta) ) ;
-    //         x = cx+radius * sin( TO_RADIAN(phi) ) * cos( TO_RADIAN(theta) ) ;
-    //         glVertex3d(x,y,z) ;
-            
-    //         // GLCOLOR(PINK);
-    //         z = cz+radius * cos( TO_RADIAN(phi-5) ) ;
-    //         y = cy + radius * sin( TO_RADIAN(phi-5) ) * sin( TO_RADIAN(theta) ) ;
-    //         x = cx + radius * sin( TO_RADIAN(phi-5) ) * cos( TO_RADIAN(theta) ) ;
-    //         glVertex3d(x,y,z) ;
-    //     }
-    //     glEnd();
-    // }    
-    // for(phi=0;phi<growSphere;phi+=5){
-    //     glBegin(GL_QUAD_STRIP);
-    //     for(theta=0;theta<=360;theta+=5){        
-    //         // GLCOLOR(CYAN);
-    //         z = cz+radius * cos( TO_RADIAN(phi) ) ;
-    //         y = cy+radius * sin( TO_RADIAN(phi) ) * sin( TO_RADIAN(theta) ) ;
-    //         x = cx+radius * sin( TO_RADIAN(phi) ) * cos( TO_RADIAN(theta) ) ;
-    //         glVertex3d(x,y,z) ;
-            
-    //         // GLCOLOR(PINK);
-    //         z = cz+radius * cos( TO_RADIAN(phi+5) ) ;
-    //         y = cy + radius * sin( TO_RADIAN(phi+5) ) * sin( TO_RADIAN(theta) ) ;
-    //         x = cx + radius * sin( TO_RADIAN(phi+5) ) * cos( TO_RADIAN(theta) ) ;
-    //         glVertex3d(x,y,z) ;
-
-    //     }
-    //     glEnd();
-    // }
-
-    // GLdouble dPhi = 5;; 
-    // GLdouble dTheta = 5 ;
-    // for(phi=-growSphere;phi<growSphere;phi+=dPhi ){
-    //     glBegin(GL_QUAD_STRIP);
-    //     for(theta=-growSphere;theta<growSphere;theta+=dTheta){
-    //         z = cz+radius * cos( TO_RADIAN(phi) ) ;
-    //         y = cy+radius * sin( TO_RADIAN(phi) ) * sin( TO_RADIAN(theta) ) ;
-    //         x = cx+radius * sin( TO_RADIAN(phi) ) * cos( TO_RADIAN(theta) ) ;
-    //         glVertex3d(x,y,z) ;
-            
-    //         // GLCOLOR(PINK);
-    //         z = cz+radius * cos( TO_RADIAN(phi+5) ) ;
-    //         y = cy + radius * sin( TO_RADIAN(phi+5) ) * sin( TO_RADIAN(theta) ) ;
-    //         x = cx + radius * sin( TO_RADIAN(phi+5) ) * cos( TO_RADIAN(theta) ) ;
-    //         glVertex3d(x,y,z) ;
-
- 
-    //     }
-    //     glEnd();
-    // }
-
-    GLdouble dx = 0.1,dy,dz;
-    GLCOLOR(RED);
-    for(dx=0.1,x=-growSphere;x<growSphere;x+=dx){
-        glBegin(GL_QUAD_STRIP);
-        for(dy=0.1,y=-growSphere;y<=growSphere;y+=dy){
-            z = sqrt(radius*radius-x*x-y*y) ;
-            glVertex3d(x,y,z) ;
-            x += dx; 
-            z = sqrt(radius*radius-x*x-y*y) ;
-            glVertex3d(x,y,z) ;
-            x -= dx ;
-        }
-        glEnd();
-
-        glBegin(GL_QUAD_STRIP);
-        for(dy=0.1,y=-growSphere;y<=growSphere;y+=dy){
-            z = -sqrt(radius*radius-x*x-y*y) ;
-            glVertex3d(x,y,z) ;
-            x += dx; 
-            z = -sqrt(radius*radius-x*x-y*y) ;
-            glVertex3d(x,y,z) ;
-            x -= dx ;
-        }
-        glEnd();
-
-
-        
-    }
-
-    GLCOLOR(GREEN);
-    for(dx=0.1,x=-growSphere;x<growSphere;x+=dx){
-        glBegin(GL_QUAD_STRIP);
-        for(dz=0.1,z=-growSphere;z<=growSphere;z+=dz){
-            y = sqrt(radius*radius-x*x-z*z) ;
-            glVertex3d(x,y,z) ;
-            x += dx; 
-            y = sqrt(radius*radius-x*x-z*z) ;
-            glVertex3d(x,y,z) ;
-            x -= dx ;
-        }
-        glEnd();
-        
-        glBegin(GL_QUAD_STRIP);
-        for(dz=0.1,z=-growSphere;z<=growSphere;z+=dz){
-            y = -sqrt(radius*radius-x*x-z*z) ;
-            glVertex3d(x,y,z) ;
-            x += dx; 
-            y = -sqrt(radius*radius-x*x-z*z) ;
-            glVertex3d(x,y,z) ;
-            x -= dx ;
-        }
-        glEnd();
-    }
-
-    GLCOLOR(BLUE);
-    for(dy=0.1,y=-growSphere;y<growSphere;y+=dy){
-        glBegin(GL_QUAD_STRIP);
-        for(dz=0.1,z=-growSphere;z<=growSphere;z+=dz){
-            x = sqrt(radius*radius-y*y-z*z) ;
-            glVertex3d(x,y,z) ;
-            y += dy; 
-            x = sqrt(radius*radius-y*y-z*z) ;
-            glVertex3d(x,y,z) ;
-            y -= dy ;
-        }
-        glEnd();
-
-        glBegin(GL_QUAD_STRIP);
-        for(dz=0.1,z=-growSphere;z<=growSphere;z+=dz){
-            x = -sqrt(radius*radius-y*y-z*z) ;
-            glVertex3d(x,y,z) ;
-            y += dy; 
-            x = -sqrt(radius*radius-y*y-z*z) ;
-            glVertex3d(x,y,z) ;
-            y -= dy ;
-        }
-        glEnd();
-
-    }
-}
-
 
 void generateVertices(){
     float n1[3];       
@@ -545,66 +259,92 @@ void drawdouble(){
     glPopMatrix();
 }
 
+void drawSphereParts(){
+    GLCOLOR(RED);
+    drawCubeSpherePart(verticesX);
+    glPushMatrix();
+        glRotatef(180,0,1,0);
+        drawCubeSpherePart(verticesX) ;
+    glPopMatrix() ;
+
+    GLCOLOR(GREEN);
+    drawCubeSpherePart(verticesY);
+    glPushMatrix();
+        glRotatef(180,1,0,0);
+        drawCubeSpherePart(verticesY) ;
+    glPopMatrix() ;
+
+    GLCOLOR(BLUE);
+    drawCubeSpherePart(verticesZ);
+    glPushMatrix();
+        glRotatef(180,1,0,0);
+        drawCubeSpherePart(verticesZ) ;
+    glPopMatrix() ;
+}
+
+void drawTriangleParts(){
+    for(int i=0;i<8;i++){
+        if( i&1 ) GLCOLOR(CYAN);
+        else GLCOLOR(PINK) ;
+        glPushMatrix();
+        glRotatef( (i&3)*90.0,1,0,0);
+        if( i&4 ){
+            glRotatef(180.0,0,0,1);
+        }
+        glBegin(GL_TRIANGLES);
+            glVertex3d(verticesX[pointsPerRow-1][pointsPerRow-1][0],verticesX[pointsPerRow-1][pointsPerRow-1][1],verticesX[pointsPerRow-1][pointsPerRow-1][2]);
+            glVertex3d(verticesY[pointsPerRow-1][pointsPerRow-1][0],verticesY[pointsPerRow-1][pointsPerRow-1][1],verticesY[pointsPerRow-1][pointsPerRow-1][2]);
+            glVertex3d(verticesZ[pointsPerRow-1][pointsPerRow-1][0],verticesZ[pointsPerRow-1][pointsPerRow-1][1],verticesZ[pointsPerRow-1][pointsPerRow-1][2]);
+        glEnd();
+        glPopMatrix();
+    }
+}
+
+void drawCylinderPart(){
+    glBegin(GL_QUAD_STRIP);
+    for(int i=0;i<pointsPerRow;i++){
+        glVertex3d(verticesY[pointsPerRow-1][i][0],
+                verticesY[pointsPerRow-1][i][1],
+                verticesY[pointsPerRow-1][i][2]);
+        glVertex3d(verticesX[i][pointsPerRow-1][0],
+                verticesX[i][pointsPerRow-1][1],
+                verticesX[i][pointsPerRow-1][2]);
+    }
+    glEnd();
+}
+void drawCylinderParts(){
+    GLCOLOR(YELLOW);
+    for(int i=0;i<8;i++){
+        glPushMatrix();
+        glRotatef(90.0*(i&3),1,0,0);
+        if( i&4 ){
+            glRotatef(180,0,0,1);
+        }
+        drawCylinderPart();
+        glPopMatrix();
+    }
+    for(int i=0;i<4;i++){
+        glPushMatrix();
+            glRotatef(90*i,1,0,0);
+            glRotatef(90,0,1,0);
+            drawCylinderPart();
+        glPopMatrix();
+    }
+}
+
 void displayMe(void)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);             // To operate on Model-View matrix
     glLoadIdentity();                       // Reset the model-view matrix
-    // glRotatef(rot,0.0,1.0,0.0);
     gluLookAt(eyex,eyey,eyez,
               centerx,centery,centerz,
               upx,upy,upz);
-    // drawOctahedron();   
-    // drawPyramid();
-    // drawSphere(1.0,0.0,0.0,0.0);
     drawAxes();
-    // GLCOLOR(RED) ;
-    // drawdouble();
-    // glPushMatrix();
-    //     glRotatef(90,0,1,0);
-    //     GLCOLOR(GREEN) ;
-    //     drawdouble();
-    // glPopMatrix();
-    // glPushMatrix();
-    //     glRotatef(90,0,0,1);
-    //     GLCOLOR(BLUE);
-    //     drawdouble();
-    // glPopMatrix();
-
     generateVertices();
-    GLCOLOR(RED);
-    drawCubeSpherePart(verticesX);
-   
-    GLCOLOR(GREEN);
-    drawCubeSpherePart(verticesY);
-
-    GLCOLOR(BLUE);
-    drawCubeSpherePart(verticesZ);
-
-    GLCOLOR(CYAN);
-    glBegin(GL_TRIANGLES);
-        glVertex3d(verticesX[pointsPerRow-1][pointsPerRow-1][0],verticesX[pointsPerRow-1][pointsPerRow-1][1],verticesX[pointsPerRow-1][pointsPerRow-1][2]);
-        glVertex3d(verticesY[pointsPerRow-1][pointsPerRow-1][0],verticesY[pointsPerRow-1][pointsPerRow-1][1],verticesY[pointsPerRow-1][pointsPerRow-1][2]);
-        glVertex3d(verticesZ[pointsPerRow-1][pointsPerRow-1][0],verticesZ[pointsPerRow-1][pointsPerRow-1][1],verticesZ[pointsPerRow-1][pointsPerRow-1][2]);
-
-        
-        // glVertex3d(0,0,1);
-        // glVertex3d(0,1,0);
-        // glVertex3d(1,0,0);
-    
-    glEnd();
-
-    GLCOLOR(YELLOW);
-    glBegin(GL_QUAD_STRIP);
-    for(int i=0;i<pointsPerRow;i++){
-        glVertex3d(verticesY[pointsPerRow-1][i][0],
-                    verticesY[pointsPerRow-1][i][1],
-                    verticesY[pointsPerRow-1][i][2]);
-        glVertex3d(verticesX[i][pointsPerRow-1][0],
-                    verticesX[i][pointsPerRow-1][1],
-                    verticesX[i][pointsPerRow-1][2]);
-    }
-    glEnd();
+    drawSphereParts();
+    drawTriangleParts();
+    drawCylinderParts();
     // drawOctahedron();
     glutSwapBuffers(); 
 }
