@@ -5,6 +5,19 @@
 #include <iostream> 
 
 using namespace std ;
+#define GLCOLOR(color) glColor3f(color.R/255.0,color.G/255.0,color.B/255.0)
+#define TO_RADIAN(deg) ((deg)*(M_PI/180.0))
+#define DEG2RAD (M_PI/180.0) 
+
+
+struct Color{
+    GLfloat R,G,B ;
+}   PINK = { 235, 52, 186},
+    CYAN = {52, 201, 235},
+    RED = {255,0,0},
+    BLUE = {0,0,255},
+    GREEN = {0,255,0},
+    YELLOW = {252, 236, 3};
 
 
 double hh=11,mm=25,ss=55 ;
@@ -25,8 +38,7 @@ void glCircle2d(GLdouble cx,GLdouble cy,GLdouble radius,double r=1,double g=0,do
     glEnd();
 }
 
-void displayMe(void)
-{
+void displayMe(void){
     glClear(GL_COLOR_BUFFER_BIT);
     
     double cx=0.0,cy=0.5,r1=0.3,r2=0.4;
