@@ -24,12 +24,18 @@ double hh=11,mm=25,ss=55 ;
 double theta ;
 double theta_max = 30*M_PI/180.0 ;
 double omega ;
+double cx=0.0,cy=0.5,r1=0.3,r2=0.4;
+double hline_x,hline_y,mline_x,mline_y,sline_x,sline_y ;
+double mline_len=r1;
+double hline_len=0.2;
+double sline_len=0.35 ; 
+double pendulumL=0.5;
 uint64_t t ; 
 
-void glCircle2d(GLdouble cx,GLdouble cy,GLdouble radius,double r=1,double g=0,double b=0){
+void glCircle2d(GLdouble cx,GLdouble cy,GLdouble radius,Color color){
     // glBegin(GL_LINE_LOOP);  // All vertices form a single loop of single pixel width
     glBegin(GL_POLYGON);  // All vertices form a single loop of single pixel width
-        glColor3f(r,g,b);  // Light-blue
+        GLCOLOR(color);
         for (float theta = 0; theta < 360; theta += 10) {
             float x = cx + radius * cos(theta*M_PI/180);
             float y = cy + radius * sin(theta*M_PI/180);
@@ -38,14 +44,58 @@ void glCircle2d(GLdouble cx,GLdouble cy,GLdouble radius,double r=1,double g=0,do
     glEnd();
 }
 
+void drawClock(GLdouble cx,GLdouble cy){
+    glBegin(GL_QUAD_STRIP);
+        for(float theta=0;theta <= 360 ; theta += 10){
+            GLCOLOR(CYAN);
+            glVertex2f(cx + r2 * cos(theta*M_PI/180),cy + r2 * sin(theta*M_PI/180)); 
+            GLCOLOR(BLUE);
+            glVertex2f(cx + r1 * cos(theta*M_PI/180),cy + r1 * sin(theta*M_PI/180)); 
+        }
+    glEnd();   
+
+    glCircle2d(cx,cy,0.03,BLUE);
+
+    for(float theta = 0;theta < 360; theta += 6){
+        if( (int)theta % 30 == 0 ) glPointSize(5); 
+        else glPointSize(1);
+        GLCOLOR(CYAN);
+        glBegin(GL_POINTS);
+            glVertex2f(cx + (r1-0.01) * cos(theta*M_PI/180),cy + (r1-0.01) * sin(theta*M_PI/180)); 
+        glEnd();
+    } 
+
+    glLineWidth((GLfloat)5);
+    glBegin(GL_LINES); 
+        GLCOLOR(CYAN);
+        glVertex2d(cx, cy);
+        glVertex2d(hline_x,hline_y);
+    glEnd();
+    glLineWidth(1);
+    glBegin(GL_LINES) ;
+        glColor3f(0.0f,0.0f,1.0f); 
+        glVertex2d(sline_x,sline_y);
+        glVertex2d( cx,cy);
+    glEnd();
+    glLineWidth(3);
+    glBegin(GL_LINES) ;
+        GLCOLOR(CYAN);
+        glVertex2d(cx, cy);
+        glVertex2d(mline_x,mline_y);
+    glEnd();
+
+    glBegin(GL_LINES) ;
+        glColor3f(0.0f,0.0f,1.0f);  
+        glVertex2d(cx,cy-r2);
+        glVertex2d(cx+pendulumL*cos( theta),cy-r2+pendulumL*sin(theta));
+    glEnd();
+    glCircle2d(cx+pendulumL*cos( theta),cy-r2+pendulumL*sin(theta),0.04,BLUE); 
+}
+
 void displayMe(void){
     glClear(GL_COLOR_BUFFER_BIT);
     
-    double cx=0.0,cy=0.5,r1=0.3,r2=0.4;
-    double hline_x,hline_y,mline_x,mline_y,sline_x,sline_y ;
-    double mline_len=r1;
-    double hline_len=0.2;
-    double sline_len=0.35 ; 
+    
 
     hline_x = cx + hline_len* cos ( (3-hh)*30*M_PI/180 ) ;
     hline_y = cy + hline_len* sin ( (3-hh)*30*M_PI/180 ) ;
@@ -60,45 +110,15 @@ void displayMe(void){
     omega = M_PI/1000.0 ;
     theta = theta_max * cos(omega*(double)t) - M_PI/2.0;
 
-    glCircle2d(cx,cy,r2,1,1,1) ;
-    glCircle2d(cx,cy,r1,0,1,0);
+    // glCircle2d(cx,cy,r2,1,1,1) ;
+    // glCircle2d(cx,cy,r1,0,1,0);
 
-    glBegin(GL_LINES);  // Each set of 2 vertices form a line of single pixel width
-        glColor3f(0.0f,1.0f,1.0f);  // Whit
-        glVertex2d(cx, cy);
-        glVertex2d(hline_x,hline_y);
-    glEnd();
-    glBegin(GL_LINES) ;
-        glColor3f(0.0f,0.0f,1.0f);  // Blue
-        glVertex2d(sline_x,sline_y);
-        glVertex2d( cx,cy);
-    glEnd();
-    glBegin(GL_LINES) ;
-        glColor3f(1.0f,.0f,1.0f);  // Whit
-        glVertex2d(cx, cy);
-        glVertex2d(mline_x,mline_y);
-    glEnd();
-
-
-    glBegin(GL_LINES) ;
-        glColor3f(0.0f,0.0f,1.0f);  // Blue
-        glVertex2d(cx,cy-r2);
-        glVertex2d(cx+r1*cos( theta),cy-r2+r1*sin(theta));
-    glEnd();
-    glCircle2d(cx+r1*cos( theta),cy-r2+r1*sin(theta),0.02,0,0,1);
+    drawClock(cx,cy);
 
     glFlush();
 }
 
-/* Called back when there is no other event to be handled */
-// void idle() {
-// //    t = time(0) ;
-//    tm *ltm = localtime(&t);
-//    hh=ltm->tm_hour;
-//    mm=ltm->tm_min;
-//    ss=ltm->tm_sec;
-//    glutPostRedisplay();
-// }
+
 void timer(int extra)
 { 
     // t = time(0) ;
@@ -112,7 +132,7 @@ void timer(int extra)
     mm=ltm->tm_min;
     ss=ltm->tm_sec;
     glutPostRedisplay();
-    glutTimerFunc(10, timer, 0);
+    glutTimerFunc(100, timer, 0);
 }
 
 /* Callback handler for normal-key event */
