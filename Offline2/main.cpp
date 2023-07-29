@@ -30,6 +30,9 @@ int main(int argc,char **argv){
         else if(cmd == "push"){}
         else if(cmd == "pop"){
         }
+        else {
+            break; 
+        }
     }
 
 }
