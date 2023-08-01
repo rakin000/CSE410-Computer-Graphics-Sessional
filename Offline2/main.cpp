@@ -1,6 +1,18 @@
 #include <bits/stdc++.h>
 #include "transform.cpp"
+#include "bitmap_image.hpp"
 using namespace std ;
+
+static unsigned long int g_seed = 1;
+
+namespace my 
+{
+    inline int random(){
+        g_seed = (214013 * g_seed + 2531011);
+        return (g_seed >> 16) & 0x7FFF;
+    }
+}
+
 
 Vector eye,look,up; 
 double fovY,aspectRatio,near,far ;
@@ -25,6 +37,7 @@ int main(int argc,char **argv){
     r.normalize();
     Vector u = r.cross(l) ;
 
+    // view transformation     
     Matrix T(vector<double>({1,0,0,-eye.x(), 
                             0,1,0,-eye.y(), 
                             0,0,1,-eye.z(),
@@ -35,7 +48,7 @@ int main(int argc,char **argv){
                             0,0,0,1}),4,4);
     Matrix V = R*T ;
 
-
+    // projection 
     double fovX = fovY * aspectRatio;
     double t = near * tan(DEG2RAD*(fovY/2)) ;
     double r_ = near * tan(DEG2RAD*(fovX/2)) ;
@@ -47,7 +60,9 @@ int main(int argc,char **argv){
 
 
     string cmd ;
-    transformation_matrix M ;
+    transformation_matrix M ; // model transformation
+
+    vector<vector<Vector>> triangles ; // for z buffer  
     while(in>>cmd){
         if(cmd == "triangle"){
             vector<Vector> p(3) ;
@@ -58,24 +73,29 @@ int main(int argc,char **argv){
             for(int i=0;i<3;i++){
                 in>>p[i] ;
             }
+
+            // model transformation
             p = M.transform(p) ;
             for(int i=0;i<3;i++){
                 out<<p[i];
             }
             out<<endl;
-
+            
+            // view transformation  
             p = V*p;
             for(int i=0;i<3;i++){
                 out2<<p[i];
             }
             out2<<endl;
 
+            // projection transformation 
             p = P*p;
             for(int i=0;i<3;i++){
                 out3<<p[i];
             }
-            out3<<endl;
 
+            out3<<endl;
+            triangles.push_back(p) ;
         }
         else if(cmd == "translate"){
             double dx,dy,dz;
@@ -103,6 +123,33 @@ int main(int argc,char **argv){
         else if(cmd == "end"){
             break; 
         }
-    }
+    } 
+    out.close();
+    out2.close();
+    out3.close() ;
+    in.close();
+    // z -buffer
+    fstream config(string(argv[2]),ios_base::in); 
+    double screen_height,screen_width; 
+    config>>screen_width>>screen_height;
+    const double z_max = 1.0;
+    vector<vector<double>> z_buffer(screen_width,vector<double> (screen_height,z_max));
+    double dx = 2/screen_width ,dy = 2/screen_height ;
+    double left_x = dx/2 ;
+    double top_y = 1.0-dy/2; 
+
+    bitmap_image image(screen_width,screen_height);
+    image.set_all_channels(0,0,0) ;
+
+
+    for(vector<Vector> triangle: triangles){
+        // process triangle  
+        double max_x = max({triangle[0].x(),triangle[1].x(),triangle[2].x()});
+        double min_x = min({triangle[0].x(),triangle[1].x(),triangle[2].x()});
+        double max_y = max({triangle[0].y(),triangle[1].y(),triangle[2].y()});
+        double min_y = min({triangle[0].y(),triangle[1].y(),triangle[2].y()});
+
+    
+    } 
 
 }
