@@ -1,4 +1,2 @@
-
-    // cout<<d*e<<endl;
-    // cout<<e*d<<endl;
-    // cout<<d+e<<endl;
+    // Matrix m = Matrix::rotate(Vector(0,0,1),90) ;
+    // Vector rotz = Matrix::R(Vector(0,0,1),a,90) ;
