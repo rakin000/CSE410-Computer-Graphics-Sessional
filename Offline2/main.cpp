@@ -149,7 +149,8 @@ int main(int argc,char **argv){
         double max_y = max({triangle[0].y(),triangle[1].y(),triangle[2].y()});
         double min_y = min({triangle[0].y(),triangle[1].y(),triangle[2].y()});
 
-    
+        int top_y = max_y/dy ;
+        int bottom_y = min_y/dy; 
     } 
 
 }
