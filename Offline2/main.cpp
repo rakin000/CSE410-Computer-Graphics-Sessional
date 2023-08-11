@@ -139,60 +139,65 @@ int main(int argc,char **argv){
 
     const double z_max = 1.0;
     const double z_min = -1.0;
-    vector<vector<double>> z_buffer(screen_width+1,vector<double> (screen_height+1,z_max));
-    // vector<vector<rgb_t>> frame_buffer(screen_width,vector<rgb_t> (screen_height,{255,255,255}));
-    double dx = 2.0/screen_width ,dy = 2.0/screen_height ;
-    double left_x = dx/2 ;
-    double top_y = 1.0-dy/2; 
+    const double y_max = 1.0;
+    const double y_min = -1.0;
+    const double x_max = 1.0;
+    const double x_min = -1.0;
+    vector<vector<double>> z_buffer(screen_width,vector<double> (screen_height,z_max));
 
-    bitmap_image image(screen_width+1,screen_height+1);
+    double dx = (x_max-x_min)/screen_width ,dy = (y_max-y_min)/screen_height ;
+    double left_x = x_min+dx/2 ;
+    double right_x = x_max-dx/2 ;
+    double top_y = y_max-dy/2 ;
+    double bottom_y = y_min+dy/2 ;
+
+    bitmap_image image(screen_width,screen_height);
     image.set_all_channels(0,0,0) ;
 
     out3 = fstream("stage3.txt",ios_base::in); 
     triangles = vector<vector<Vector>>();
-    Vector temp ;
-    while(out3>>temp){
-    
+    while(!out3.eof()){
+        vector<Vector> p(3) ;
+        out3>>p[0]>>p[1]>>p[2] ;
+        triangles.push_back(p);
     }
 
     for(vector<Vector> triangle: triangles){
-        // process triangle
         rgb_t col = {my::random(),my::random(),my::random()} ;
 
-        for(int i=0;i<3;i++){ 
-            triangle[i] = triangle[i] + 1.0 ;
+        // for(int i=0;i<3;i++){ 
+            // triangle[i] = triangle[i] + 1.0 ;
             // cout<<triangle[i]; 
-        } 
+        // } 
         // cout<<endl ;
 
-        double max_x = min(2.0,max({triangle[0].x(),triangle[1].x(),triangle[2].x()}));
-        double min_x = max(0.0,min({triangle[0].x(),triangle[1].x(),triangle[2].x()}));
-        double max_y = min(2.0,max({triangle[0].y(),triangle[1].y(),triangle[2].y()}));
-        double min_y = max(0.0,min({triangle[0].y(),triangle[1].y(),triangle[2].y()}));
+        double triangle_max_x = max({triangle[0].x(),triangle[1].x(),triangle[2].x()});
+        double triangle_min_x = min({triangle[0].x(),triangle[1].x(),triangle[2].x()});
+        double triangle_max_y = max({triangle[0].y(),triangle[1].y(),triangle[2].y()});
+        double triangle_min_y = min({triangle[0].y(),triangle[1].y(),triangle[2].y()});
 
-        // cout<<min_x<<" "<<max_x<<endl; 
-        // cout<<min_y<<" "<<max_y<<endl; 
-        // cout<<endl;
+        triangle_max_x = min(right_x,triangle_max_x);
+        triangle_min_x = max(left_x,triangle_min_x);
+        triangle_max_y = min(top_y,triangle_max_y);
+        triangle_min_y = max(bottom_y,triangle_min_y);
 
-        int topline_y = round(max_y/dy);
-        int bottomline_y = round(min_y/dy) ;
+        int topline_y = round((triangle_max_y-bottom_y)/dy);
+        int bottomline_y = round((triangle_min_y-bottom_y)/dy) ;
+        topline_y = min((int)screen_height-1,topline_y);
+        bottomline_y = max(0,bottomline_y) ;
 
-        for(unsigned int y = min((int)screen_height-1,topline_y);y>=max(0,bottomline_y);y--){
-            int leftline_x = round(max_x/dx); 
-            int rightline_x = round(min_x/dx); 
-            Vector left(max_x, y*dy, z_max) ; 
-            Vector right(min_x, y*dy, z_max) ; 
+        for(unsigned int y = topline_y;y>=bottomline_y;y--){
+            Vector left(triangle_max_x, y*dy, z_max) ; 
+            Vector right(triangle_min_x, y*dy, z_max) ; 
+
             for(int i=0;i<3;i++){
                 int j = (i+1)%3; 
                 if( abs(triangle[j].y()-triangle[i].y()) <= 1e-16 ){
                 }
                 else {
-                    double tt = (y*dy-triangle[i].y())/(triangle[j].y()-triangle[i].y()) ;
-                    // double x = triangle[i].x() + t*(triangle[j].x()-triangle[i].x()) ;
-                    // cout<<"tt:"<<tt<<endl;
+                    double tt = ( (y*dy+bottom_y)-triangle[i].y())/(triangle[j].y()-triangle[i].y()) ;
                     if( tt >= 0.0 && tt <= 1.0) {
                         Vector point = triangle[i] + (triangle[j]-triangle[i])*tt ;
-                        // cout<<"point: "<<point; 
 
                         if( point.x() <= left.x() )
                             left = point ;
@@ -203,8 +208,14 @@ int main(int argc,char **argv){
                 }
             }
 
-            for(int x = max(0,(int)round(left.x()/dx));x<=min(screen_width-1,round(right.x()/dx));x++){
-                double z = -1.0+left.z() + ((right.z()-left.z())/(right.x()-left.x()))*(x*dx-left.x()) ;
+            
+            int leftline_x = round((left.x()-left_x)/dx); 
+            int rightline_x = round((right.x()-left_x)/dx); 
+            leftline_x = max(0,leftline_x) ;
+            rightline_x = min((int)screen_width-1,rightline_x) ;
+
+            for(int x = leftline_x;x<=rightline_x;x++){
+                double z = left.z() + ((right.z()-left.z())/(right.x()-left.x()))*((x*dx+left_x)-left.x()) ;
                 if( z < z_buffer[x][screen_height-1-y] && z > z_min ){
                     z_buffer[x][screen_height-1-y] = z; 
                     image.set_pixel(x,(int)screen_height-y,col) ;
@@ -227,7 +238,7 @@ int main(int argc,char **argv){
 
     zout.close();
 
-    image.save_image("image.bmp"); 
+    image.save_image("out.bmp"); 
 
     return 0;
 }
