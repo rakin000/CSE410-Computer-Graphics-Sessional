@@ -22,7 +22,6 @@ int main(int argc,char **argv){
         exit(-1) ;
     }
 
-    // cout<<"here\n";
     fstream in(string(argv[1]),ios_base::in) ;
     fstream out("stage1.txt",ios_base::out);
     fstream out2("stage2.txt",ios_base::out);
@@ -149,6 +148,12 @@ int main(int argc,char **argv){
     bitmap_image image(screen_width+1,screen_height+1);
     image.set_all_channels(0,0,0) ;
 
+    out3 = fstream("stage3.txt",ios_base::in); 
+    triangles = vector<vector<Vector>>();
+    Vector temp ;
+    while(out3>>temp){
+    
+    }
 
     for(vector<Vector> triangle: triangles){
         // process triangle
@@ -156,9 +161,9 @@ int main(int argc,char **argv){
 
         for(int i=0;i<3;i++){ 
             triangle[i] = triangle[i] + 1.0 ;
-            cout<<triangle[i]; 
+            // cout<<triangle[i]; 
         } 
-        cout<<endl ;
+        // cout<<endl ;
 
         double max_x = min(2.0,max({triangle[0].x(),triangle[1].x(),triangle[2].x()}));
         double min_x = max(0.0,min({triangle[0].x(),triangle[1].x(),triangle[2].x()}));
@@ -172,7 +177,7 @@ int main(int argc,char **argv){
         int topline_y = round(max_y/dy);
         int bottomline_y = round(min_y/dy) ;
 
-        for(unsigned int y = topline_y;y>=bottomline_y;y--){
+        for(unsigned int y = min((int)screen_height-1,topline_y);y>=max(0,bottomline_y);y--){
             int leftline_x = round(max_x/dx); 
             int rightline_x = round(min_x/dx); 
             Vector left(max_x, y*dy, z_max) ; 
@@ -180,10 +185,6 @@ int main(int argc,char **argv){
             for(int i=0;i<3;i++){
                 int j = (i+1)%3; 
                 if( abs(triangle[j].y()-triangle[i].y()) <= 1e-16 ){
-                    // if( triangle[i].y() == y) {
-                    //     leftline_x = min( {int(triangle[i].x()/dx),int(triangle[j].x()/dx),leftline_x});
-                    //     rightline_x = max( {int(triangle[i].x()/dx),int(triangle[j].x()/dx),rightline_x});
-                    // }
                 }
                 else {
                     double tt = (y*dy-triangle[i].y())/(triangle[j].y()-triangle[i].y()) ;
@@ -202,24 +203,23 @@ int main(int argc,char **argv){
                 }
             }
 
-            for(int x = round(left.x()/dx);x<=(right.x()/dx);x++){
+            for(int x = max(0,(int)round(left.x()/dx));x<=min(screen_width-1,round(right.x()/dx));x++){
                 double z = -1.0+left.z() + ((right.z()-left.z())/(right.x()-left.x()))*(x*dx-left.x()) ;
-                if( z < z_buffer[x][y] && z > z_min ){
-                    z_buffer[x][y] = z; 
+                if( z < z_buffer[x][screen_height-1-y] && z > z_min ){
+                    z_buffer[x][screen_height-1-y] = z; 
                     image.set_pixel(x,(int)screen_height-y,col) ;
                 }
-                
             }
         } 
     }
 
 
     fstream zout("z_buffer.txt",ios_base::out) ;
-    zout<<setprecision(7)<<fixed ;
-    for(int i=0;i<z_buffer.size();i++){
-        for(int j=0;j<z_buffer[i].size();j++){
-            if( z_buffer[i][j]<z_max){
-                zout<<z_buffer[i][j]<< " " ;
+    zout<<setprecision(6)<<fixed ;
+    for(int y=0;y<screen_height;y++){
+        for(int x=0;x<screen_width;x++){
+            if( z_buffer[x][y]<z_max){
+                zout<<z_buffer[x][y]<< "\t" ;
             }
         }
         zout<<endl;
