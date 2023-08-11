@@ -130,12 +130,16 @@ int main(int argc,char **argv){
     out2.close();
     out3.close() ;
     in.close();
+
+
     //z -buffer
     fstream config(string(argv[2]),ios_base::in); 
     double screen_height,screen_width; 
     config>>screen_width>>screen_height;
     config.close();
+
     const double z_max = 1.0;
+    const double z_min = -1.0;
     vector<vector<double>> z_buffer(screen_width+1,vector<double> (screen_height+1,z_max));
     // vector<vector<rgb_t>> frame_buffer(screen_width,vector<rgb_t> (screen_height,{255,255,255}));
     double dx = 2.0/screen_width ,dy = 2.0/screen_height ;
@@ -147,8 +151,7 @@ int main(int argc,char **argv){
 
 
     for(vector<Vector> triangle: triangles){
-        // process trianglek
-
+        // process triangle
         rgb_t col = {my::random(),my::random(),my::random()} ;
 
         for(int i=0;i<3;i++){ 
@@ -162,9 +165,9 @@ int main(int argc,char **argv){
         double max_y = min(2.0,max({triangle[0].y(),triangle[1].y(),triangle[2].y()}));
         double min_y = max(0.0,min({triangle[0].y(),triangle[1].y(),triangle[2].y()}));
 
-        cout<<min_x<<" "<<max_x<<endl; 
-        cout<<min_y<<" "<<max_y<<endl; 
-        cout<<endl;
+        // cout<<min_x<<" "<<max_x<<endl; 
+        // cout<<min_y<<" "<<max_y<<endl; 
+        // cout<<endl;
 
         int topline_y = round(max_y/dy);
         int bottomline_y = round(min_y/dy) ;
@@ -185,26 +188,24 @@ int main(int argc,char **argv){
                 else {
                     double tt = (y*dy-triangle[i].y())/(triangle[j].y()-triangle[i].y()) ;
                     // double x = triangle[i].x() + t*(triangle[j].x()-triangle[i].x()) ;
-                    cout<<"tt:"<<tt<<endl;
+                    // cout<<"tt:"<<tt<<endl;
                     if( tt >= 0.0 && tt <= 1.0) {
                         Vector point = triangle[i] + (triangle[j]-triangle[i])*tt ;
-                        cout<<"point: "<<point; 
+                        // cout<<"point: "<<point; 
 
-                        if( point.x() < left.x() )
+                        if( point.x() <= left.x() )
                             left = point ;
-                        if( point.x() > right.x() )
+                        if( point.x() >= right.x() )
                             right = point ;
                     }
 
                 }
             }
 
-
             for(int x = round(left.x()/dx);x<=(right.x()/dx);x++){
                 double z = -1.0+left.z() + ((right.z()-left.z())/(right.x()-left.x()))*(x*dx-left.x()) ;
-                if( z < z_buffer[x][(int)screen_height-y] ){
-
-                    z_buffer[x][(int)screen_height-y] = z; 
+                if( z < z_buffer[x][y] && z > z_min ){
+                    z_buffer[x][y] = z; 
                     image.set_pixel(x,(int)screen_height-y,col) ;
                 }
                 
@@ -228,4 +229,5 @@ int main(int argc,char **argv){
 
     image.save_image("image.bmp"); 
 
+    return 0;
 }
