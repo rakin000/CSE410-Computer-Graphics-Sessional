@@ -1,21 +1,22 @@
 #include <bits/stdc++.h>
 #include <GL/glut.h>
-#include "utils.h"
+#include "utils.cpp"
 #include "bitmap_image.hpp" 
 
 
 using namespace std ;
     
-#define GLCOLOR(color) glColor3f( (color).R/255.0,(color).G/255.0,(color).B/255.0)
 #define TO_RADIAN(deg) ((deg)*(M_PI/180.0))
 #define DEG2RAD (M_PI/180.0) 
 
-
+double window_height = 1024, window_width = 1024; 
 Vector pos(200,0,10);   // position of the eye
 Vector l(-1/sqrt(2), -1/sqrt(2),0 );     // look/forward direction
 Vector r(-1/sqrt(2), 1/sqrt(2), 0);     // right direction
 Vector u = r.cross(l);     // up direction
 bool showAxes = 1;
+
+
 
 double zNear, zFar ; 
 double fovY,fovX; 
@@ -60,6 +61,7 @@ void input(string filename){
         else if( obj_type == "sphere") {
             objects[i] = new Sphere() ; 
             in>>*((Sphere*)objects[i]); 
+            cout << objects[i]->color.R << " " << objects[i]->color.G << " " << objects[i]->color.B << endl ;
         }
     }
 
@@ -82,6 +84,72 @@ void input(string filename){
 	}
 }
 
+
+int imageCount = 1;
+void save_frame(){
+    bitmap_image image(image_width,image_height);
+    image.set_all_channels(0,0,0) ;
+
+    double distance = (window_height/2.0) / tan(DEG2RAD * fovY / 2.0) ;
+
+    Vector top_left = pos + (l*distance) + (u * (window_height/2.0) - (r*(window_width/2.0)) );  
+
+    double dx = window_width/ image_width ; 
+    double dy = window_height/image_height; 
+
+    top_left = top_left + (r * (dx / 2.0)) - (u * (dy/2.0))  ;   
+
+    int nearestObjectIndex = -1;
+	double t,tMin;
+
+	for(int i=0;i<image_width;i++){
+		for(int j=0;j<image_height;j++){
+			Vector pixel = top_left + (r* dx * i) - (u * dy * j);
+			
+            Ray ray(pos,pixel-pos);
+			Color color;
+
+			// cout<<"Ray direction "<<ray.dir<<endl;
+
+			tMin = -1;
+			nearestObjectIndex = -1;
+			for(int k=0;k<(int)objects.size();k++){
+				// t = objects[k]->intersect(ray,color, 0);
+                t = objects[k]->intersect(ray,&color,0) ;
+				// cout<<"After Color "<<color.R<<" "<<color.B<<" "<<color.B<<endl;
+				if(t>0 && (nearestObjectIndex == -1 || t<tMin) )
+					tMin = t , nearestObjectIndex = k;
+			}
+
+			// if nearest object is found, then shade the pixel
+			if(nearestObjectIndex != -1){
+				// cout<<"Object "<<nearestObjectIndex<<" intersected"<<endl;
+				// color = objects[nearestObjectIndex]->color;
+				color = {0,0,0} ;
+				// cout<<"Before Color "<<color.r<<" "<<color.g<<" "<<color.b<<endl;
+				// double t = objects[nearestObjectIndex]->intersect(ray,color, 1);
+				double t = objects[nearestObjectIndex]->intersect(ray,&color,0);
+
+				// if(color.R > 255) color.R = 255;
+				// if(color.G > 255) color.G = 255;
+				// if(color.B > 255) color.B = 255;
+// 
+				// if(color.R < 0) color.R = 0;
+				// if(color.G < 0) color.G = 0;
+				// if(color.B < 0) color.B = 0;
+				
+				// cout<<"After Color "<<color.R<<" "<<color.B<<" "<<color.B<<endl;
+				image.set_pixel(i, j, color.R, color.G, color.B);
+				image.set_pixel(i, j, objects[nearestObjectIndex]->color.R, objects[nearestObjectIndex]->color.G, objects[nearestObjectIndex]->color.B);
+			}
+		}
+	}
+
+	// image.save_image("Output_1"+to_string(imageCount)+".bmp");
+	image.save_image("out.bmp");
+	imageCount++;
+	cout<<"Saving Image"<<endl;		
+}
 
 
 void drawAxes() {
@@ -158,6 +226,7 @@ void keyboardListener(unsigned char key, int x,int y){
 	switch(key){
 		case '0':
 			// capture();
+            save_frame() ;
 			break;
 		case '1':
 			// rotate LEFT 
@@ -294,7 +363,7 @@ int main(int argc, char** argv){
 
     glutInit(&argc, argv);
     // glutInitDisplayMode(GLUT_SINGLE);
-    glutInitWindowSize(1024, 1024);
+    glutInitWindowSize(window_width, window_height);
     glutInitWindowPosition(100, 100);
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGB);	//Depth, Double buffer, RGB color
     glutCreateWindow("Ray Tracing");
