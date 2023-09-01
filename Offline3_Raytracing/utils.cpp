@@ -56,18 +56,21 @@ struct Color{
     }
     Color operator*(double k){
         Color temp(this->R * k, this->G * k, this->B * k);
-        temp.fixRange();
+        // temp.fixRange();
         return temp;
     }
     Color operator*(Color c){
         Color temp(this->R * c.R, this->G * c.G, this->B * c.B);
-        temp.fixRange();
+        // temp.fixRange();
         return temp;
     }
     Color operator+(Color c){
         Color temp(this->R + c.R, this->G + c.G, this->B + c.B);
-        temp.fixRange();
+        // temp.fixRange();
         return temp;
+    }
+    bool operator==(Color rhs){
+        return this->R == rhs.R && this->G == rhs.G && this->B == rhs.B;
     }
 
     void fixRange(){
@@ -96,12 +99,11 @@ Color PINK = {235, 52, 186},
   WHITE = {255, 255, 255},
   BLACK = {0,0,0};
 
-struct SurfaceProperties
-{
+struct SurfaceProperties{
     double ka;
     double kd;
     double ks;
-    double alpha;
+    double reflectance;
 };
 
 struct Ray{
@@ -109,8 +111,8 @@ struct Ray{
     
     Ray(Vector origin, Vector dir){
         this->origin = origin;
-        dir.normalize();
         this->dir = dir;
+        this->dir.normalize() ;
     }
 
     Ray(const Ray &rhs){
@@ -141,6 +143,7 @@ public:
         this->B = B ;
         this->C = C ; 
         this->normal = (B-A).cross(C-A) ;
+        this->normal.normalize() ;
         this->color = color;
     }
 
@@ -179,7 +182,7 @@ public:
 
 
     const float EPSILON = 0.0000001;
-    double intersect(Ray &ray){
+    double intersect2(Ray &ray){
         Vector edge1, edge2, h, s, q;
         double a, f, u, v;
         edge1 = B-A ;
@@ -213,6 +216,56 @@ public:
             return -1;
     }
 
+
+    double intersect(
+        Ray &ray)
+    {
+        double t ; 
+        Vector vec1 = B - A;
+        Vector vec2 = C - A;
+        // no need to normalize
+        Vector N = vec1.cross(vec2); // N
+        float area2 = N.abs();
+        // Step 1: finding P
+        
+        // check if the ray and plane are parallel.
+        float NdotRayDirection = N.dot(ray.dir);
+        if (fabs(NdotRayDirection) < EPSILON) // almost 0
+            return -1; // they are parallel, so they don't intersect! 
+
+        // compute d parameter using equation 2
+        float d = -N.dot(A);
+        
+        t = -(N.dot(ray.origin) + d) / NdotRayDirection;
+        
+        if (t < 0) return -1; // the triangle is behind
+    
+        // compute the intersection point using equation 1
+        Vector P = ray.origin + ray.dir * t;
+    
+        Vector nC; // vector perpendicular to triangle's plane
+    
+        Vector edge0 = B - A; 
+        Vector vp0 = P - A;
+        nC = edge0.cross(vp0);
+        if (N.dot(nC) < 0) return -1; // P is on the right side
+    
+        // edge 1
+        Vector edge1 = C - B; 
+        Vector vp1 = P - B;
+        nC = edge1.cross(vp1);
+        if (N.dot(nC) < 0)  return -1; // P is on the right side
+    
+        // edge 2
+        Vector edge2 = A - C ; 
+        Vector vp2 = P - C;
+        nC = edge2.cross(vp2);
+        if (N.dot(nC) < 0) return -1; // P is on the right side;
+
+
+        return t; // this ray hits the triangle
+    }
+
 };
 
 
@@ -244,23 +297,6 @@ class Object{
     }
     virtual void draw() = 0 ;
     virtual  double intersect(Ray ray, Color *color, Vector &normal) = 0 ;
-    
-    // {
-    //     *color = this->color ;
-    //     double t = 1e18;
-    //     for(Triangle &triangle : triangle_primitives){
-    //         double tt = triangle.intersect(ray) ;
-    //         if( tt < 0 ) continue ;
-    //         t = min(t,tt) ;
-    //     }
-    //     t = (t == 1e18 || t < 0) ? -1 : t ;
-    //     return t;
-    // } 
-    // } virtual double intersect(Ray ray,Color *color,int level){
-        
-    // }
-    // void setColor(Color color) {}
-    // void setCoefficients(SurfaceProperties coefficients) {}
 };
 
 class Sphere : public Object{
@@ -362,7 +398,7 @@ class Sphere : public Object{
         sphere.color.G *= 255.0;
         sphere.color.B *= 255.0;
 
-        in >> sphere.coefficients.ka >> sphere.coefficients.kd >> sphere.coefficients.ks >> sphere.coefficients.alpha;
+        in >> sphere.coefficients.ka >> sphere.coefficients.kd >> sphere.coefficients.ks >> sphere.coefficients.reflectance;
         in >> sphere.shine;
 
         sphere = Sphere(sphere.reference_point, sphere.length, sphere.color, sphere.coefficients, sphere.shine) ;
@@ -395,8 +431,8 @@ class Pyramid : public Object {
         this->triangle_primitives.push_back( Triangle(B,C,apex) ) ;
         this->triangle_primitives.push_back( Triangle(C,D,apex) ) ;
         this->triangle_primitives.push_back( Triangle(D,A,apex) ) ;
-        this->triangle_primitives.push_back( Triangle(A,B,C) ) ;
-        this->triangle_primitives.push_back( Triangle(A,C,D) ) ;
+        this->triangle_primitives.push_back( Triangle(A,C,B) ) ;
+        this->triangle_primitives.push_back( Triangle(A,D,C) ) ;
     }
 
     void draw(){
@@ -429,7 +465,7 @@ class Pyramid : public Object {
         pyramid.color.R *= 255.0;
         pyramid.color.G *= 255.0;
         pyramid.color.B *= 255.0;
-        in >> pyramid.coefficients.ka >> pyramid.coefficients.kd >> pyramid.coefficients.ks >> pyramid.coefficients.alpha;
+        in >> pyramid.coefficients.ka >> pyramid.coefficients.kd >> pyramid.coefficients.ks >> pyramid.coefficients.reflectance;
         in >> pyramid.shine;
 
         pyramid = Pyramid(pyramid.reference_point, pyramid.width, pyramid.height, pyramid.color, pyramid.coefficients, pyramid.shine);
@@ -449,27 +485,33 @@ class Cube : public Object {
         this->coefficients = coefficients;
         this->shine = shininess;
 
-        Vector A = bottom_lower_left + Vector(0,0,side) ;
-        Vector B = bottom_lower_left + Vector(side,0,side) ;
-        Vector C = bottom_lower_left + Vector(side,side,side) ;
-        Vector D = bottom_lower_left + Vector(0,side,side) ;
-        Vector E = bottom_lower_left + Vector(0,0,0) ;
-        Vector F = bottom_lower_left + Vector(side,0,0) ;
-        Vector G = bottom_lower_left + Vector(side,side,0) ;
-        Vector H = bottom_lower_left + Vector(0,side,0) ;
+        Vector A = bottom_lower_left + Vector(0,0,0) ;
+        Vector B = bottom_lower_left + Vector(side,0,0) ;
+        Vector C = bottom_lower_left + Vector(side,0,side) ;
+        Vector D = bottom_lower_left + Vector(0,0,side) ;
+
+        Vector E = bottom_lower_left + Vector(0,side,0) ;
+        Vector F = bottom_lower_left + Vector(side,side,0) ;
+        Vector G = bottom_lower_left + Vector(side,side,side) ;
+        Vector H = bottom_lower_left + Vector(0,side,side) ;
 
         this->triangle_primitives.push_back( Triangle(A,B,C) ) ;
         this->triangle_primitives.push_back( Triangle(A,C,D) ) ;
-        this->triangle_primitives.push_back( Triangle(E,F,G) ) ;
-        this->triangle_primitives.push_back( Triangle(E,G,H) ) ;
-        this->triangle_primitives.push_back( Triangle(A,B,F) ) ;
-        this->triangle_primitives.push_back( Triangle(A,F,E) ) ;
-        this->triangle_primitives.push_back( Triangle(B,C,G) ) ;
-        this->triangle_primitives.push_back( Triangle(B,G,F) ) ;
-        this->triangle_primitives.push_back( Triangle(C,D,H) ) ;
-        this->triangle_primitives.push_back( Triangle(C,H,G) ) ;
-        this->triangle_primitives.push_back( Triangle(D,A,E) ) ;
-        this->triangle_primitives.push_back( Triangle(D,E,H) ) ;
+
+        this->triangle_primitives.push_back( Triangle(E,G,F) ) ;
+        this->triangle_primitives.push_back( Triangle(E,H,G) ) ;
+        
+        this->triangle_primitives.push_back( Triangle(A,F,B) ) ;
+        this->triangle_primitives.push_back( Triangle(A,E,F) ) ;
+
+        this->triangle_primitives.push_back( Triangle(B,G,C) ) ;
+        this->triangle_primitives.push_back( Triangle(B,F,G) ) ;
+
+        this->triangle_primitives.push_back( Triangle(C,H,D) ) ;
+        this->triangle_primitives.push_back( Triangle(C,G,H) ) ;
+
+        this->triangle_primitives.push_back( Triangle(D,E,A) ) ;
+        this->triangle_primitives.push_back( Triangle(D,H,E) ) ;
 
     }
 
@@ -496,45 +538,6 @@ class Cube : public Object {
         t = (t == 1e18 || t < 0) ? -1 : t ;
         return t; 
     }
-
-
-    // double intersect2(Ray ray, Color *color, Vector &normal){
-    //     Vector minBound = reference_point; 
-    //     Vector maxBound = reference_point + Vector(length, length, length);
-        
-    //     double tNear = -std::numeric_limits<double>::infinity();
-    //     double tFar = std::numeric_limits<double>::infinity();
-        
-    //     for (int i = 0; i < 3; ++i) {
-    //         if (std::abs(ray.dir.x()) < std::numeric_limits<double>::epsilon()) {
-    //             // Ray is parallel to the slab
-    //             if (ray.origin.x() < minBound.x() || ray.origin.x() > maxBound.x()) {
-    //                 return -1; // Ray misses the slab
-    //             }
-    //         } else {
-    //             double t1 = (minBound.x() - ray.origin.x()) / ray.direction.x();
-    //             double t2 = (maxBound.x() - ray.origin.x()) / ray.direction.x();
-                
-    //             if (t1 > t2) {
-    //                 std::swap(t1, t2);
-    //             }
-                
-    //             tNear = std::max(tNear, t1);
-    //             tFar = std::min(tFar, t2);
-                
-    //             if (tNear > tFar) {
-    //                 return false; // Ray misses the slab
-    //             }
-    //         }
-    //     }
-        
-    //     tMin = tNear;
-    //     tMax = tFar;
-        
-    //     return true;
-    // }
-
-
     friend std::istream &operator>>(std::istream &in, Cube &cube){
         in >> cube.reference_point;
         in >> cube.length; 
@@ -542,7 +545,7 @@ class Cube : public Object {
         cube.color.R *= 255.0;
         cube.color.G *= 255.0;
         cube.color.B *= 255.0;
-        in >> cube.coefficients.ka >> cube.coefficients.kd >> cube.coefficients.ks >> cube.coefficients.alpha;
+        in >> cube.coefficients.ka >> cube.coefficients.kd >> cube.coefficients.ks >> cube.coefficients.reflectance;
         in >> cube.shine;
 
         cube = Cube(cube.reference_point, cube.length, cube.color, cube.coefficients, cube.shine);

@@ -24,7 +24,7 @@ double aspect ;
 int recursion_level; 
 int image_height; 
 int image_width; 
-double checkerboard_side, checkerboard_ka, checkerboard_kd, checkerboard_ks, checkerboard_alpha ;
+double checkerboard_side, checkerboard_ka, checkerboard_kd, checkerboard_ks, checkerboard_reflectance ;
 vector<Object*> objects ;
 vector<Light*> lights; 
 vector<Spotlight*> spotlights; 
@@ -65,7 +65,7 @@ void input(string filename){
         }
     }
     // objects.push_back(new Checkerboard(pos,checkerboard_side,zFar)); 
-    objects.push_back(new Checkerboard(checkerboard_side,{checkerboard_ka,checkerboard_kd,checkerboard_ks,checkerboard_alpha})); 
+    objects.push_back(new Checkerboard(checkerboard_side,{checkerboard_ka,checkerboard_kd,checkerboard_ks,checkerboard_reflectance})); 
 
     int num_light;
 	in >> num_light;
@@ -84,12 +84,14 @@ void input(string filename){
 		in >> *spotlight;
 		lights.push_back(spotlight);
 	}
+
+    cout<<"Total Lights: "<< lights.size()<<endl;
 }
 
 
-Color ray_tracing(Ray ray, int level, bool reflect = 0){
-    if(level <= 0) return BLACK;
-
+Color ray_tracing(Ray ray, int level, bool reflect = false ){
+    const double eps = 1e-4; 
+    if(level < 0) return BLACK;
 
     // find the nearest object that intersects with the ray 
     Object *nearestObject = nullptr ;
@@ -99,13 +101,17 @@ Color ray_tracing(Ray ray, int level, bool reflect = 0){
     Vector normal,minNormal; 
     for(int k=0;k<(int)objects.size();k++){
         t = objects[k]->intersect(ray,&color,normal) ;
-        if(t>0 && (nearestObject== nullptr || t<tMin) )
-            tMin = t, nearestObject=objects[k], minColor = color, minNormal = normal;
+        if(t>eps && (nearestObject== nullptr || t<tMin) ){
+            tMin = t; 
+            nearestObject=objects[k]; 
+            minColor = color; 
+            minNormal = normal;
+        }
     }
-    minColor.fixRange();
+    // minColor.fixRange();
     color = minColor ;
     normal = minNormal; 
-    if( nearestObject == nullptr || tMin < 0 ) return BLACK; 
+    if( nearestObject == nullptr  ) return BLACK; 
 
     // if an intersection is found, then shade the pixel; 
     
@@ -113,15 +119,17 @@ Color ray_tracing(Ray ray, int level, bool reflect = 0){
     Vector intersection_point = ray.origin + ray.dir * tMin;
     Color tempColor ;
     Vector tempNormal ;
-    Color diffuse_multiplier  ;
-    Color specular_multiplier  ;
+    double lambert = 0 ;
+    double phong = 0 ;
 
     for(int i=0;i<(int)lights.size();i++){
         Ray lightray(lights[i]->pos,intersection_point-lights[i]->pos);
         double tLightray = nearestObject->intersect(lightray,&tempColor,tempNormal) ;
-        
+
+        // if( (lights[i]->pos - intersection_point).abs() <= eps ) continue ;
+
         if( lights[i]->type == Light::SPOTLIGHT ){
-            double theta = angle(lightray.dir,((Spotlight*)lights[i])->dir);
+            double theta = (1.0/DEG2RAD) * angle(lightray.dir,((Spotlight*)lights[i])->dir);
             if( theta > ((Spotlight*)lights[i])->cutoffAngle ) continue;
         }
 
@@ -130,34 +138,31 @@ Color ray_tracing(Ray ray, int level, bool reflect = 0){
             t = objects[k]->intersect(lightray,&tempColor,tempNormal) ;
             if(t>0 && t<tLightray){
                 isObscured = 1; 
-                // cout<<"Found and obscuring object - "<<k <<", t = "<< t << ", tMIn = "<< tMin<<endl;
-                // cout << "Ray = " <<lightray.origin << "--->" << lightray.dir<<endl;
                 break; 
             }
         }
 
         if(!isObscured){
-            double diffuse_multiplier_t = max(0.0,-lightray.dir.dot(normal));
-            Ray reflection = Ray(intersection_point, normal * (2 * lightray.dir.dot(normal)) - lightray.dir  ); 
-            reflectedRays.push_back(reflection) ;
-            double specular_multiplier_t = pow(max(0.0, -ray.dir.dot(reflection.dir)), nearestObject->shine);
-
-            diffuse_multiplier = diffuse_multiplier +  lights[i]->color * diffuse_multiplier_t * nearestObject->coefficients.kd ;
-            specular_multiplier = specular_multiplier +  lights[i]->color * specular_multiplier_t * nearestObject->coefficients.ks ;
+            double distance_to_source = (lights[i]->pos - intersection_point).abs();
+            double scaling_factor = exp(-distance_to_source*distance_to_source*lights[i]->falloff);
+            lambert += max(0.0,-lightray.dir.dot(normal))*scaling_factor;
+            Ray reflection = Ray(intersection_point, lightray.dir -  normal*(2 * lightray.dir.dot(normal)) ); 
+            phong += pow(max(0.0, -ray.dir.dot(reflection.dir)), nearestObject->shine)*scaling_factor;
         }
     }
 
-    color = color * nearestObject->coefficients.ka + color * diffuse_multiplier + color * specular_multiplier ; 
-    for(Ray &ray: reflectedRays) 
-        color = color + ray_tracing(ray,level-1,true)*nearestObject->coefficients.alpha;
-    // color = (reflect) ? color * nearestObject->coefficients.alpha : color; 
-    return color ;
+
+    color = color * ( nearestObject->coefficients.ka + nearestObject->coefficients.kd * lambert + nearestObject->coefficients.ks * phong ); 
+    Ray reflected_ray = Ray(intersection_point, ray.dir-normal*(2*(ray.dir.dot(normal))) );
+    reflected_ray.origin = reflected_ray.origin + reflected_ray.dir*eps;
+    Color reflected_color = ray_tracing(reflected_ray,level-1,true);
+    color = color + reflected_color; // * nearestObject->coefficients.reflectance;
+    return reflect  ? color * nearestObject->coefficients.reflectance  : color;
 }
 
 
 int imageCount = 1;
 void save_frame(){
-    cout << "Capturing frame" <<endl;
     bitmap_image image(image_width,image_height);
     image.set_all_channels(0,0,0) ;
 
@@ -180,17 +185,16 @@ void save_frame(){
             Ray ray(pos,pixel-pos);
 			
             Color color = ray_tracing(ray,recursion_level) ;         
-            color.fixRange();
+            // color.fixRange();
 			image.set_pixel(i, j, color.R, color.G, color.B);
 		}
 
-        showLoadingScreen(i,image_width,"Saving image----") ;
+        showLoadingScreen(i,image_width-1,"Saving image----") ;
 	}
 
-	// image.save_image("Output_1"+to_string(imageCount)+".bmp");
-	image.save_image("out.bmp");
+	image.save_image("out"+to_string(imageCount)+".bmp");
+	// image.save_image("out.bmp");
 	imageCount++;
-	cout<<"Saving Image"<<endl;		
 }
 
 
@@ -351,11 +355,9 @@ void mouseListener(int button, int state, int x, int y){
 			break;
 
 		case GLUT_RIGHT_BUTTON:
-			//........
 			break;
 
 		case GLUT_MIDDLE_BUTTON:
-			//........
 			break;
 
 		default:
@@ -365,8 +367,7 @@ void mouseListener(int button, int state, int x, int y){
 }
 
 
-void reshapeListener(GLsizei width, GLsizei height) {  // GLsizei for non-negative integer
-    // Compute aspect ratio of the new window
+void reshapeListener(GLsizei width, GLsizei height) {  
     if (height == 0) height = 1;                // To prevent divide by 0
     GLfloat aspect = (GLfloat)width / (GLfloat)height;
 
