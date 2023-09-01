@@ -54,6 +54,27 @@ struct Color{
         this->B = c.B;
         return *this;
     }
+    Color operator*(double k){
+        Color temp(this->R * k, this->G * k, this->B * k);
+        temp.fixRange();
+        return temp;
+    }
+    Color operator*(Color c){
+        Color temp(this->R * c.R, this->G * c.G, this->B * c.B);
+        temp.fixRange();
+        return temp;
+    }
+    Color operator+(Color c){
+        Color temp(this->R + c.R, this->G + c.G, this->B + c.B);
+        temp.fixRange();
+        return temp;
+    }
+
+    void fixRange(){
+        R = max(0.0,min(R, 255.0));
+        G = max(0.0,min(G, 255.0));
+        B = max(0.0,min(B, 255.0));
+    }
 
     friend istream& operator>>(istream &in, Color &c){
         in >> c.R >> c.G >> c.B;
@@ -119,12 +140,21 @@ public:
     {
     }
 
-
+    Triangle(const Triangle& rhs):
+        Triangle(rhs.A,rhs.B,rhs.C,rhs.color)
+    {
+    }
 
     Triangle():
         Triangle(Vector(0,0,0),Vector(1,0,0),Vector(0,0,1))
     {
     }
+
+    Triangle& operator=(const Triangle &rhs){
+        *this = Triangle(rhs.A,rhs.B,rhs.C,rhs.color) ;
+        return *this ;
+    }
+
 
     void draw(){
         // cout<<color<<endl;
@@ -137,8 +167,8 @@ public:
     }
 
 
+    const float EPSILON = 0.0000001;
     double intersect(Ray &ray){
-        const float EPSILON = 0.0000001;
         Vector edge1, edge2, h, s, q;
         double a, f, u, v;
         edge1 = B-A ;
@@ -172,10 +202,6 @@ public:
             return -1;
     }
 
-    // double intersect(Ray &ray) {
-    //     double a = (B-A-ray.origin)/; 
-
-    // }
 };
 
 
@@ -186,12 +212,12 @@ class Object{
     Vector reference_point;
     double height, width, length;
 
-    SurfaceProperties coefficients;
-    int shine;
     vector<Triangle> triangle_primitives ;
 
     public : 
+    SurfaceProperties coefficients;
     Color color;
+    int shine;
     Object() {
         reference_point = Vector(0, 0, 0);
         height = 0;
@@ -206,7 +232,7 @@ class Object{
             // delete triangle ;
     }
     virtual void draw() = 0 ;
-    virtual  double intersect(Ray ray, Color *color, int level) = 0 ;
+    virtual  double intersect(Ray ray, Color *color, Vector &normal) = 0 ;
     
     // {
     //     *color = this->color ;
@@ -277,12 +303,8 @@ class Sphere : public Object{
         }
     }
 
-    virtual double intersect(Ray ray, Color *color, int level){
-        // cout << "Before color: "<< this->color.R << " " << this->color.G << " " << this->color.B <<endl; 
+    virtual double intersect(Ray ray, Color *color, Vector &normal){
         *color = this->color; 
-        // color.R = this->color.R ;
-        // color.G = this->color.G ;
-        // color.B = this->color.B ;
 
         //equation  t*t + 2(P0-O).D t + (P0-O).(P0-O)-r*r = 0 ;
         ray.origin = ray.origin - reference_point; // P0-O 
@@ -305,10 +327,18 @@ class Sphere : public Object{
         if(t2<t1) 
             swap(t1, t2);
 
-        if (t1 > 0)
+        if (t1 > 0){
+            Vector intersectionPoint = ray.origin + ray.dir * t1;
+            normal = intersectionPoint-reference_point; 
+            normal.normalize();
             return t1;
-        if (t2 > 0)
+        }
+        if (t2 > 0){
+            Vector intersectionPoint = ray.origin + ray.dir * t2;
+            normal = intersectionPoint-reference_point; 
+            normal.normalize();
             return t2;
+        }
         
         return -1;
     }
@@ -365,13 +395,17 @@ class Pyramid : public Object {
         }
     }
 
-    virtual double intersect(Ray ray, Color *color, int level){
+    double intersect(Ray ray, Color *color, Vector &normal){
         *color = this->color ;
         double t = 1e18;
         for(Triangle &triangle : triangle_primitives){
             double tt = triangle.intersect(ray) ;
             if( tt < 0 ) continue ;
-            t = min(t,tt) ;
+            if( tt < t ){
+                normal = triangle.normal ;
+                normal.normalize() ;
+                t = tt ;
+            }
         }
         t = (t == 1e18 || t < 0 ) ? -1 : t ;
         return t;  
@@ -435,13 +469,17 @@ class Cube : public Object {
         }
     }
 
-    virtual  double intersect(Ray ray, Color *color, int level){
+    double intersect(Ray ray, Color *color, Vector &normal){
         *color = this->color ;
         double t = 1e18;
         for(Triangle &triangle : triangle_primitives){
             double tt = triangle.intersect(ray) ;
             if( tt < 0 ) continue ;
-            t = min(t,tt) ;
+            if( tt < t ){
+                normal = triangle.normal ;
+                normal.normalize() ;
+                t = tt ;
+            }
         }
         t = (t == 1e18 || t < 0) ? -1 : t ;
         return t; 
@@ -468,7 +506,11 @@ class Checkerboard : public Object {
     double checkerboard_side;
     double zFar;
 
-    Checkerboard(Vector &pos, double checkerboard_side,double zFar) : Object() {
+    Checkerboard(double checkerboard_side, SurfaceProperties coeff) : Object() {
+        this->checkerboard_side = checkerboard_side ;
+        this->coefficients = coeff ;
+    }
+    Checkerboard(Vector &pos, double checkerboard_side, double zFar) : Object() {
         this->pos = pos;
         this->checkerboard_side = checkerboard_side;
         this->zFar
@@ -485,7 +527,7 @@ class Checkerboard : public Object {
     } 
 
 
-    double intersect(Ray ray, Color *color, int level){
+    double intersect(Ray ray, Color *color, Vector &normal){
         if( ray.dir.z() == 0 ) return -1 ; // parallel to plane (z=0) 
 
         double t = -(ray.origin.z())/ray.dir.z() ;
@@ -494,6 +536,7 @@ class Checkerboard : public Object {
         int x = ceil(point.x()/checkerboard_side);
         int y = ceil(point.y()/checkerboard_side);
         *color =  getColor(x,y) ;
+        normal = Vector(0,0,1) ;
         // cout<<"color : "<<*color<<endl;
         return t ;
     }

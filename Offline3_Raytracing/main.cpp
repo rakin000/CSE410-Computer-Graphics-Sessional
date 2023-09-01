@@ -64,7 +64,8 @@ void input(string filename){
             // cout << objects[i]->color.R << " " << objects[i]->color.G << " " << objects[i]->color.B << endl ;
         }
     }
-    objects.push_back(new Checkerboard(pos,checkerboard_side,zFar)); 
+    // objects.push_back(new Checkerboard(pos,checkerboard_side,zFar)); 
+    objects.push_back(new Checkerboard(checkerboard_side,{checkerboard_ka,checkerboard_kd,checkerboard_ks,checkerboard_alpha})); 
 
     int num_light;
 	in >> num_light;
@@ -86,102 +87,93 @@ void input(string filename){
 }
 
 
-void ray_tracing(Ray ray, int level){
-    if(level > recursion_level) return ;
+Color ray_tracing(Ray ray, int level){
+    if(level > recursion_level) return BLACK;
 
-    int nearestObjectIndex = -1;
+
+    // find the nearest object that intersects with the ray 
+    Object *nearestObject = nullptr ;
     double t,tMin;
-
     tMin = -1;
-    nearestObjectIndex = -1;
+    Color color,minColor;
+    Vector normal,minNormal; 
     for(int k=0;k<(int)objects.size();k++){
-        // t = objects[k]->intersect(ray,color, 0);
-        t = objects[k]->intersect(ray,NULL,0) ;
-        if(t>0 && (nearestObjectIndex == -1 || t<tMin) )
-            tMin = t , nearestObjectIndex = k;
+        t = objects[k]->intersect(ray,&color,normal) ;
+        if(t>0 && (nearestObject== nullptr || t<tMin) )
+            tMin = t, nearestObject=objects[k], minColor = color, minNormal = normal;
     }
+    minColor.fixRange();
+    color = minColor ;
+    normal = minNormal; 
+    if( nearestObject == nullptr || tMin < 0 ) return BLACK; 
 
-    // if nearest object is found, then shade the pixel
-    if(nearestObjectIndex != -1){
-        Color color;
-        double t = objects[nearestObjectIndex]->intersect(ray,&color,0);
-
-        if(color.R > 255) color.R = 255;
-        if(color.G > 255) color.G = 255;
-        if(color.B > 255) color.B = 255;
-        if(color.R < 0) color.R = 0;
-        if(color.G < 0) color.G = 0;
-        if(color.B < 0) color.B = 0;
-        
-        // image.set_pixel(i, j, color.R, color.G, color.B);
-    }   
+    // if an intersection is found, then shade the pixel; 
+    Vector intersection_point = ray.origin + ray.dir * tMin;
+    Color tempColor ;
+    Vector tempNormal ;
+    Color diffuse_multiplier  ;
+    Color specular_multiplier  ;
 
     for(int i=0;i<(int)lights.size();i++){
-        Vector lightDir = lights[i]->position - ray.start;
-        lightDir.normalize();
+        Ray lightray(lights[i]->pos,intersection_point-lights[i]->pos);
 
-        Ray shadowRay(ray.start,lightDir);
+        bool isObscured = 0; 
+        for(int k=0;k<(int)objects.size();k++){
+            t = objects[k]->intersect(lightray,&tempColor,tempNormal) ;
+            if(t>0 && t<tMin){
+                isObscured = 1; 
+                break; 
+            }
+        }
+
+        if(!isObscured){
+            double diffuse_multiplier_t = max(0.0,-lightray.dir.dot(normal));
+            Ray reflection = Ray(intersection_point, lightray.dir - normal * (2 * lightray.dir.dot(normal)) ); 
+            double specular_multiplier_t = pow(max(0.0, -ray.dir.dot(reflection.dir)), nearestObject->shine);
+
+            diffuse_multiplier = diffuse_multiplier +  lights[i]->color * diffuse_multiplier_t * nearestObject->coefficients.kd ;
+            specular_multiplier = specular_multiplier +  lights[i]->color * specular_multiplier_t * nearestObject->coefficients.ks ;
+        }
+
         int nearestObjectIndex = -1;
         double t,tMin;
-
-        tMin = -1;
-        nearestObjectIndex = -1;
-        for(int k=0;k<(int)objects.size();k++){
-            // t = objects[k]->intersect(ray,color, 0);
-            t = objects[k]->intersect(shadowRay,NULL,0) ;
-            if(t>0 && (nearestObjectIndex == -1 || t<tMin) )
-                tMin = t , nearestObjectIndex = k;
-        }
-
-        // if nearest object is found, then shade the pixel
-        if(nearestObjectIndex != -1){
-            // Color color;
-            // double t = objects[nearestObjectIndex]->intersect(ray,&color,0);
-
-            // if(color.R > 255) color.R = 255;
-            // if(color.G > 255) color.G = 255;
-            // if(color.B > 255) color.B = 255;
-            // if(color.R < 0) color.R = 0;
-            // if(color.G < 0) color.G = 0;
-            // if(color.B < 0) color.B = 0;
-            
-            // image.set_pixel(i, j, color.R, color.G, color.B);
-        }
     }
 
+    color = color * nearestObject->coefficients.ka + color * diffuse_multiplier + color * specular_multiplier ; 
 
-    for(int i=0;i<(int)spotlights.size();i++){
-        Vector lightDir = spotlights[i]->position - ray.start;
-        lightDir.normalize();
+    return color ;
+    // for(int i=0;i<(int)spotlights.size();i++){
+    //     Vector lightDir = spotlights[i]->position - ray.start;
+    //     lightDir.normalize();
 
-        Ray shadowRay(ray.start,lightDir);
-        int nearestObjectIndex = -1;
-        double t,tMin;
+    //     Ray shadowRay(ray.start,lightDir);
+    //     int nearestObjectIndex = -1;
+    //     double t,tMin;
 
-        tMin = -1;
-        nearestObjectIndex = -1;
-        for(int k=0;k<(int)objects.size();k++){
-            // t = objects[k]->intersect(ray,color, 0);
-            t = objects[k]->intersect(shadowRay,NULL,0) ;
-            if(t>0 && (nearestObjectIndex == -1 || t<tMin) )
-                tMin = t , nearestObjectIndex = k;
-        }
+    //     tMin = -1;
+    //     nearestObjectIndex = -1;
+    //     for(int k=0;k<(int)objects.size();k++){
+    //         // t = objects[k]->intersect(ray,color, 0);
+    //         t = objects[k]->intersect(shadowRay,NULL,0) ;
+    //         if(t>0 && (nearestObjectIndex == -1 || t<tMin) )
+    //             tMin = t , nearestObjectIndex = k;
+    //     }
 
-        // if nearest object is found, then shade the pixel
-        if(nearestObjectIndex != -1){
-            // Color color;
-            // double t = objects[nearestObjectIndex]->intersect(ray,&color,0);
+    //     // if nearest object is found, then shade the pixel
+    //     if(nearestObjectIndex != -1){
+    //         // Color color;
+    //         // double t = objects[nearestObjectIndex]->intersect(ray,&color,0);
 
-            // if(color.R > 255) color.R = 255;
-            // if(color.G > 255) color.G = 255;
-            // if(color.B > 255) color.B = 255;
-            // if(color.R < 0) color.R = 0;
-            // if(color.G < 0) color.G = 0;
-            // if(color.B < 0) color.B = 0;
+    //         // if(color.R > 255) color.R = 255;
+    //         // if(color.G > 255) color.G = 255;
+    //         // if(color.B > 255) color.B = 255;
+    //         // if(color.R < 0) color.R = 0;
+    //         // if(color.G < 0) color.G = 0;
+    //         // if(color.B < 0) color.B = 0;
             
-            // image.set_pixel(i, j, color.R, color.G, color.B);
-        }
-    }
+    //         // image.set_pixel(i, j, color.R, color.G, color.B);
+    //     }
+    // }
 }
 
 
@@ -208,31 +200,34 @@ void save_frame(){
 			Vector pixel = top_left + (r* dx * i) - (u * dy * j);
 			
             Ray ray(pos,pixel-pos);
-			Color color;
+			
+            Color color = ray_tracing(ray,0) ;         
+            
+            
 
-			tMin = -1;
-			nearestObjectIndex = -1;
-			for(int k=0;k<(int)objects.size();k++){
-				// t = objects[k]->intersect(ray,color, 0);
-                t = objects[k]->intersect(ray,&color,0) ;
-				if(t>0 && (nearestObjectIndex == -1 || t<tMin) )
-					tMin = t , nearestObjectIndex = k;
-			}
+			// tMin = -1;
+			// nearestObjectIndex = -1;
+			// for(int k=0;k<(int)objects.size();k++){
+			// 	// t = objects[k]->intersect(ray,color, 0);
+            //     t = objects[k]->intersect(ray,&color,0) ;
+			// 	if(t>0 && (nearestObjectIndex == -1 || t<tMin) )
+			// 		tMin = t , nearestObjectIndex = k;
+			// }
 
-			// if nearest object is found, then shade the pixel
-			if(nearestObjectIndex != -1){
-				color = {0,0,0} ;
-				double t = objects[nearestObjectIndex]->intersect(ray,&color,0);
+			// // if nearest object is found, then shade the pixel
+			// if(nearestObjectIndex != -1){
+			// 	color = {0,0,0} ;
+			// 	double t = objects[nearestObjectIndex]->intersect(ray,&color,0);
 
-				if(color.R > 255) color.R = 255;
-				if(color.G > 255) color.G = 255;
-				if(color.B > 255) color.B = 255;
-				if(color.R < 0) color.R = 0;
-				if(color.G < 0) color.G = 0;
-				if(color.B < 0) color.B = 0;
+			// 	if(color.R > 255) color.R = 255;
+			// 	if(color.G > 255) color.G = 255;
+			// 	if(color.B > 255) color.B = 255;
+			// 	if(color.R < 0) color.R = 0;
+			// 	if(color.G < 0) color.G = 0;
+				// if(color.B < 0) color.B = 0;
 				
-				image.set_pixel(i, j, color.R, color.G, color.B);
-			}
+			image.set_pixel(i, j, color.R, color.G, color.B);
+			// }
 		}
 
         showLoadingScreen(i,image_width,"Saving image----") ;
