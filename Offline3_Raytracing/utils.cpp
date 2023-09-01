@@ -113,6 +113,17 @@ struct Ray{
         this->dir = dir;
     }
 
+    Ray(const Ray &rhs){
+        this->origin = rhs.origin;
+        this->dir = rhs.dir;
+    }
+
+    Ray& operator=(const Ray &rhs){
+        this->origin = rhs.origin;
+        this->dir = rhs.dir;
+        return *this;
+    }
+
     friend ostream& operator<<(ostream &out, Ray r){
         out << "Origin : " << r.origin << ", Direction : " << r.dir;
         return out;
@@ -470,6 +481,7 @@ class Cube : public Object {
     }
 
     double intersect(Ray ray, Color *color, Vector &normal){
+        // return -1; 
         *color = this->color ;
         double t = 1e18;
         for(Triangle &triangle : triangle_primitives){
@@ -484,6 +496,44 @@ class Cube : public Object {
         t = (t == 1e18 || t < 0) ? -1 : t ;
         return t; 
     }
+
+
+    // double intersect2(Ray ray, Color *color, Vector &normal){
+    //     Vector minBound = reference_point; 
+    //     Vector maxBound = reference_point + Vector(length, length, length);
+        
+    //     double tNear = -std::numeric_limits<double>::infinity();
+    //     double tFar = std::numeric_limits<double>::infinity();
+        
+    //     for (int i = 0; i < 3; ++i) {
+    //         if (std::abs(ray.dir.x()) < std::numeric_limits<double>::epsilon()) {
+    //             // Ray is parallel to the slab
+    //             if (ray.origin.x() < minBound.x() || ray.origin.x() > maxBound.x()) {
+    //                 return -1; // Ray misses the slab
+    //             }
+    //         } else {
+    //             double t1 = (minBound.x() - ray.origin.x()) / ray.direction.x();
+    //             double t2 = (maxBound.x() - ray.origin.x()) / ray.direction.x();
+                
+    //             if (t1 > t2) {
+    //                 std::swap(t1, t2);
+    //             }
+                
+    //             tNear = std::max(tNear, t1);
+    //             tFar = std::min(tFar, t2);
+                
+    //             if (tNear > tFar) {
+    //                 return false; // Ray misses the slab
+    //             }
+    //         }
+    //     }
+        
+    //     tMin = tNear;
+    //     tMax = tFar;
+        
+    //     return true;
+    // }
+
 
     friend std::istream &operator>>(std::istream &in, Cube &cube){
         in >> cube.reference_point;
@@ -543,10 +593,14 @@ class Checkerboard : public Object {
 };
 
 struct Light{
+    static const int POINT = 0 ;
+    static const int SPOTLIGHT = 2 ;
     Vector pos;
     Color color;
     double falloff;
+    int type ; 
     Light(){
+        type = POINT ; 
         color = WHITE ;
     }
     void draw() {
@@ -570,6 +624,7 @@ struct Spotlight : Light{
     double cutoffAngle; 
     Spotlight(): Light() 
     {
+        type = SPOTLIGHT ;
     }
     void draw(){
         glPointSize(15);

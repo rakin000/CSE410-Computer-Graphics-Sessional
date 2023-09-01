@@ -82,13 +82,13 @@ void input(string filename){
 	for(int i=0;i<num_spotlights;i++){
 		Spotlight *spotlight = new Spotlight();
 		in >> *spotlight;
-		spotlights.push_back(spotlight);
+		lights.push_back(spotlight);
 	}
 }
 
 
-Color ray_tracing(Ray ray, int level){
-    if(level > recursion_level) return BLACK;
+Color ray_tracing(Ray ray, int level, bool reflect = 0){
+    if(level <= 0) return BLACK;
 
 
     // find the nearest object that intersects with the ray 
@@ -108,6 +108,8 @@ Color ray_tracing(Ray ray, int level){
     if( nearestObject == nullptr || tMin < 0 ) return BLACK; 
 
     // if an intersection is found, then shade the pixel; 
+    
+    vector<Ray> reflectedRays ;
     Vector intersection_point = ray.origin + ray.dir * tMin;
     Color tempColor ;
     Vector tempNormal ;
@@ -116,12 +118,20 @@ Color ray_tracing(Ray ray, int level){
 
     for(int i=0;i<(int)lights.size();i++){
         Ray lightray(lights[i]->pos,intersection_point-lights[i]->pos);
+        double tLightray = nearestObject->intersect(lightray,&tempColor,tempNormal) ;
+        
+        if( lights[i]->type == Light::SPOTLIGHT ){
+            double theta = angle(lightray.dir,((Spotlight*)lights[i])->dir);
+            if( theta > ((Spotlight*)lights[i])->cutoffAngle ) continue;
+        }
 
         bool isObscured = 0; 
         for(int k=0;k<(int)objects.size();k++){
             t = objects[k]->intersect(lightray,&tempColor,tempNormal) ;
-            if(t>0 && t<tMin){
+            if(t>0 && t<tLightray){
                 isObscured = 1; 
+                // cout<<"Found and obscuring object - "<<k <<", t = "<< t << ", tMIn = "<< tMin<<endl;
+                // cout << "Ray = " <<lightray.origin << "--->" << lightray.dir<<endl;
                 break; 
             }
         }
@@ -129,51 +139,19 @@ Color ray_tracing(Ray ray, int level){
         if(!isObscured){
             double diffuse_multiplier_t = max(0.0,-lightray.dir.dot(normal));
             Ray reflection = Ray(intersection_point, lightray.dir - normal * (2 * lightray.dir.dot(normal)) ); 
+            reflectedRays.push_back(reflection) ;
             double specular_multiplier_t = pow(max(0.0, -ray.dir.dot(reflection.dir)), nearestObject->shine);
 
             diffuse_multiplier = diffuse_multiplier +  lights[i]->color * diffuse_multiplier_t * nearestObject->coefficients.kd ;
             specular_multiplier = specular_multiplier +  lights[i]->color * specular_multiplier_t * nearestObject->coefficients.ks ;
         }
-
-        int nearestObjectIndex = -1;
-        double t,tMin;
     }
 
     color = color * nearestObject->coefficients.ka + color * diffuse_multiplier + color * specular_multiplier ; 
-
+    for(Ray &ray: reflectedRays) 
+        color = color + ray_tracing(ray,level-1,true);
+    color = (reflect) ? color * nearestObject->coefficients.alpha : color; 
     return color ;
-    // for(int i=0;i<(int)spotlights.size();i++){
-    //     Vector lightDir = spotlights[i]->position - ray.start;
-    //     lightDir.normalize();
-
-    //     Ray shadowRay(ray.start,lightDir);
-    //     int nearestObjectIndex = -1;
-    //     double t,tMin;
-
-    //     tMin = -1;
-    //     nearestObjectIndex = -1;
-    //     for(int k=0;k<(int)objects.size();k++){
-    //         // t = objects[k]->intersect(ray,color, 0);
-    //         t = objects[k]->intersect(shadowRay,NULL,0) ;
-    //         if(t>0 && (nearestObjectIndex == -1 || t<tMin) )
-    //             tMin = t , nearestObjectIndex = k;
-    //     }
-
-    //     // if nearest object is found, then shade the pixel
-    //     if(nearestObjectIndex != -1){
-    //         // Color color;
-    //         // double t = objects[nearestObjectIndex]->intersect(ray,&color,0);
-
-    //         // if(color.R > 255) color.R = 255;
-    //         // if(color.G > 255) color.G = 255;
-    //         // if(color.B > 255) color.B = 255;
-    //         // if(color.R < 0) color.R = 0;
-    //         // if(color.G < 0) color.G = 0;
-    //         // if(color.B < 0) color.B = 0;
-            
-    //         // image.set_pixel(i, j, color.R, color.G, color.B);
-    //     }
-    // }
 }
 
 
@@ -201,33 +179,8 @@ void save_frame(){
 			
             Ray ray(pos,pixel-pos);
 			
-            Color color = ray_tracing(ray,0) ;         
-            
-            
-
-			// tMin = -1;
-			// nearestObjectIndex = -1;
-			// for(int k=0;k<(int)objects.size();k++){
-			// 	// t = objects[k]->intersect(ray,color, 0);
-            //     t = objects[k]->intersect(ray,&color,0) ;
-			// 	if(t>0 && (nearestObjectIndex == -1 || t<tMin) )
-			// 		tMin = t , nearestObjectIndex = k;
-			// }
-
-			// // if nearest object is found, then shade the pixel
-			// if(nearestObjectIndex != -1){
-			// 	color = {0,0,0} ;
-			// 	double t = objects[nearestObjectIndex]->intersect(ray,&color,0);
-
-			// 	if(color.R > 255) color.R = 255;
-			// 	if(color.G > 255) color.G = 255;
-			// 	if(color.B > 255) color.B = 255;
-			// 	if(color.R < 0) color.R = 0;
-			// 	if(color.G < 0) color.G = 0;
-				// if(color.B < 0) color.B = 0;
-				
+            Color color = ray_tracing(ray,2) ;         
 			image.set_pixel(i, j, color.R, color.G, color.B);
-			// }
 		}
 
         showLoadingScreen(i,image_width,"Saving image----") ;

@@ -36,7 +36,8 @@ struct Vector{
     double x(){ return v[0]; }
     double y(){ return v[1]; }
     double z(){ return v[2]; }
-
+    double abs(){
+        return sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]) ;}
 
     Vector cross(Vector rhs){
         return Vector(v[1]*rhs.v[2]-v[2]*rhs.v[1], -(v[0]*rhs.v[2]-v[2]*rhs.v[0]), v[0]*rhs.v[1]-v[1]*rhs.v[0]) ;
@@ -71,6 +72,9 @@ struct Vector{
     Vector operator/(double val){
         return Vector(v[0]/val,v[1]/val,v[2]/val) ;
     }
+    double angle(Vector rhs){
+        return acos( dot(rhs) / (abs() * rhs.abs()) ) ;
+    }
     vector<double> normalize(){
         double d = v[0]*v[0] + v[1]*v[1] + v[2]*v[2] ; 
         d = sqrt(d) ;
@@ -86,6 +90,9 @@ struct Vector{
         v[2] /= v[3];
         v[3] /= v[3];
         return v;
+    }
+    friend double angle(Vector a, Vector b){
+        return acos( a.dot(b) / (a.abs() * b.abs()) ) ;
     }
     friend istream& operator>>(istream &in, Vector &p){
         in>>p.v[0]>>p.v[1]>>p.v[2];
