@@ -6,6 +6,27 @@
 
 #define GLCOLOR(color) glColor3f( (color).R/255.0,(color).G/255.0,(color).B/255.0)
 
+void showLoadingScreen(int step, int totalSteps, string message = "Loading...") {
+        if( step == totalSteps ) {
+            std::cout << message << " complete!" << std::endl;
+            return;
+        }
+        
+        float progress = float(step) / totalSteps * 100;
+        std::cout << message << progress << "%";
+
+        // Print some animation, e.g., spinning wheel
+        switch (step % 4) {
+            case 0: std::cout << " |  "; break;
+            case 1: std::cout << " /  "; break;
+            case 2: std::cout << " -  "; break;
+            case 3: std::cout << " \\  "; break;
+        }
+
+        std::cout << "\r";
+        // std::this_thread::sleep_for(std::chrono::milliseconds(100)); // 100 ms delay
+    // std::cout << message << " complete!" << std::endl;
+}
 
 struct Color{
     double R;
@@ -32,6 +53,16 @@ struct Color{
         this->G = c.G;
         this->B = c.B;
         return *this;
+    }
+
+    friend istream& operator>>(istream &in, Color &c){
+        in >> c.R >> c.G >> c.B;
+        return in;
+    }
+
+    friend ostream& operator<<(ostream &out, Color c){
+        out << c.R << " " << c.G << " " << c.B;
+        return out;
     }
 };
 
@@ -61,12 +92,94 @@ struct Ray{
         this->dir = dir;
     }
 
-    friend ostream& operator<<(ostream &out, Ray r)
-    {
+    friend ostream& operator<<(ostream &out, Ray r){
         out << "Origin : " << r.origin << ", Direction : " << r.dir;
         return out;
     }
 };
+
+class Triangle {   // primitive 
+public:
+    Vector A,B,C ;
+    Vector normal ;
+    Color color ;
+
+    Triangle(Vector A, Vector B, Vector C, Color color = BLACK){
+        this->A = A ;
+        this->B = B ;
+        this->C = C ; 
+        this->normal = (B-A).cross(C-A) ;
+        this->color = color;
+    }
+
+    Triangle(double ax,double ay,double az,
+            double bx,double by,double bz,
+            double cx,double cy,double cz) :
+                Triangle(Vector(ax,ay,az),Vector(bx,by,bz),Vector(cx,cy,cz))
+    {
+    }
+
+
+
+    Triangle():
+        Triangle(Vector(0,0,0),Vector(1,0,0),Vector(0,0,1))
+    {
+    }
+
+    void draw(){
+        // cout<<color<<endl;
+        GLCOLOR(color) ; 
+        glBegin(GL_TRIANGLES) ; 
+            glVertex3d(A.x(),A.y(),A.z()) ;
+            glVertex3d(B.x(),B.y(),B.z()) ;
+            glVertex3d(C.x(),C.y(),C.z()) ;
+        glEnd();
+    }
+
+
+    double intersect(Ray &ray){
+        const float EPSILON = 0.0000001;
+        Vector edge1, edge2, h, s, q;
+        double a, f, u, v;
+        edge1 = B-A ;
+        edge2 = C-A;
+        h = ray.dir.cross(edge2);
+        a = edge1.dot(h);
+
+        if (a > -EPSILON && a < EPSILON)
+            return -1;    // This ray is parallel to this triangle.
+
+        f = 1.0 / a;
+        s = ray.origin - A;
+        u = f * s.dot(h);
+
+        if (u < 0.0 || u > 1.0)
+            return -1;
+
+        q = s.cross(edge1);
+        v = f * ray.dir.dot(q);
+
+        if (v < 0.0 || u + v > 1.0)
+            return -1;
+
+        // At this stage we can compute t to find out where the intersection point is on the line.
+        float t = f * edge2.dot(q);
+
+        if (t > EPSILON){ // ray intersection {
+            return t;
+        }
+        else // This means that there is a line intersection but not a ray intersection.
+            return -1;
+    }
+
+    // double intersect(Ray &ray) {
+    //     double a = (B-A-ray.origin)/; 
+
+    // }
+};
+
+
+
 
 class Object{
     protected :  
@@ -75,6 +188,7 @@ class Object{
 
     SurfaceProperties coefficients;
     int shine;
+    vector<Triangle> triangle_primitives ;
 
     public : 
     Color color;
@@ -87,9 +201,27 @@ class Object{
         coefficients = {0, 0, 0, 0};
         shine = 0;
     }
-
+    ~Object(){
+        // for(Triangle &triangle : triangle_primitives)
+            // delete triangle ;
+    }
     virtual void draw() = 0 ;
-    virtual double intersect(Ray ray,Color *color,int level) = 0 ;
+    virtual  double intersect(Ray ray, Color *color, int level) = 0 ;
+    
+    // {
+    //     *color = this->color ;
+    //     double t = 1e18;
+    //     for(Triangle &triangle : triangle_primitives){
+    //         double tt = triangle.intersect(ray) ;
+    //         if( tt < 0 ) continue ;
+    //         t = min(t,tt) ;
+    //     }
+    //     t = (t == 1e18 || t < 0) ? -1 : t ;
+    //     return t;
+    // } 
+    // } virtual double intersect(Ray ray,Color *color,int level){
+        
+    // }
     // void setColor(Color color) {}
     // void setCoefficients(SurfaceProperties coefficients) {}
 };
@@ -145,7 +277,7 @@ class Sphere : public Object{
         }
     }
 
-    double intersect(Ray ray, Color *color, int level){
+    virtual double intersect(Ray ray, Color *color, int level){
         // cout << "Before color: "<< this->color.R << " " << this->color.G << " " << this->color.B <<endl; 
         *color = this->color; 
         // color.R = this->color.R ;
@@ -162,10 +294,10 @@ class Sphere : public Object{
         double t = -1;
         if (discriminant < 0)
             return -1 ; 
-        // if(fabs(a) < 1e-5){
-            // t = -c/b;
-            // return t;
-        // }
+        if(fabs(a) < 1e-5){
+            t = -c/b;
+            return t;
+        }
 
         double t1 = (-b - sqrt(discriminant)) / (2 * a);
         double t2 = (-b + sqrt(discriminant)) / (2 * a);
@@ -189,9 +321,11 @@ class Sphere : public Object{
         sphere.color.G *= 255.0;
         sphere.color.B *= 255.0;
 
-        cout << sphere.color.R << " " << sphere.color.G << " " << sphere.color.B <<endl;;
         in >> sphere.coefficients.ka >> sphere.coefficients.kd >> sphere.coefficients.ks >> sphere.coefficients.alpha;
         in >> sphere.shine;
+
+        sphere = Sphere(sphere.reference_point, sphere.length, sphere.color, sphere.coefficients, sphere.shine) ;
+
         return in;
     }
 };
@@ -208,83 +342,42 @@ class Pyramid : public Object {
         this->color = color;
         this->coefficients = coefficients;
         this->shine = shininess;
+
+        Vector apex = lowest_point + Vector(0,0,height) ; 
+        Vector A = lowest_point + Vector(-width/2,-width/2,0) ;  
+        Vector B = lowest_point + Vector(width/2,-width/2,0) ;
+        Vector C = lowest_point + Vector(width/2,width/2,0) ;
+        Vector D = lowest_point + Vector(-width/2,width/2,0) ;
+
+
+        this->triangle_primitives.push_back( Triangle(A,B,apex) ) ;
+        this->triangle_primitives.push_back( Triangle(B,C,apex) ) ;
+        this->triangle_primitives.push_back( Triangle(C,D,apex) ) ;
+        this->triangle_primitives.push_back( Triangle(D,A,apex) ) ;
+        this->triangle_primitives.push_back( Triangle(A,B,C) ) ;
+        this->triangle_primitives.push_back( Triangle(A,C,D) ) ;
     }
 
     void draw(){
-        glBegin(GL_QUADS);
-        // front
-        GLCOLOR(color);
-        glVertex3f(reference_point.x(), reference_point.y(), reference_point.z());
-        glVertex3f(reference_point.x() + width, reference_point.y(), reference_point.z());
-        glVertex3f(reference_point.x() + width, reference_point.y() + width, reference_point.z());
-        glVertex3f(reference_point.x(), reference_point.y() + width, reference_point.z());
-        // back
-        GLCOLOR(color);
-        glVertex3f(reference_point.x(), reference_point.y(), reference_point.z() + height);
-        glVertex3f(reference_point.x() + width, reference_point.y(), reference_point.z() + height);
-        glVertex3f(reference_point.x() + width, reference_point.y() + width, reference_point.z() + height);
-        glVertex3f(reference_point.x(), reference_point.y() + width, reference_point.z() + height);
-        // left
-        GLCOLOR(color);
-        glVertex3f(reference_point.x(), reference_point.y(), reference_point.z());
-        glVertex3f(reference_point.x(), reference_point.y(), reference_point.z() + height);
-        glVertex3f(reference_point.x(), reference_point.y() + width, reference_point.z() + height);
-        glVertex3f(reference_point.x(), reference_point.y() + width, reference_point.z());
-        // right
-        GLCOLOR(color);
-        glVertex3f(reference_point.x() + width, reference_point.y(), reference_point.z());
-        glVertex3f(reference_point.x() + width, reference_point.y(), reference_point.z() + height);
-        glVertex3f(reference_point.x() + width, reference_point.y() + width, reference_point.z() + height);
-        glVertex3f(reference_point.x() + width, reference_point.y() + width, reference_point.z());
-        // top
-        GLCOLOR(color);
-        glVertex3f(reference_point.x(), reference_point.y() + width, reference_point.z());
-        glVertex3f(reference_point.x() + width, reference_point.y() + width, reference_point.z());
-        glVertex3f(reference_point.x() + width, reference_point.y() + width, reference_point.z() + height);
-        glVertex3f(reference_point.x(), reference_point.y() + width, reference_point.z() + height);
-        // bottom
-        GLCOLOR(color);
-        glVertex3f(reference_point.x(), reference_point.y(), reference_point.z());
-        glVertex3f(reference_point.x() + width, reference_point.y(), reference_point.z());
-        glVertex3f(reference_point.x() + width, reference_point.y(), reference_point.z() + height);
-        glVertex3f(reference_point.x(), reference_point.y(), reference_point.z() + height);
-
-        glEnd();
+        for(Triangle &triangle : triangle_primitives){
+            triangle.color = this->color ;
+            triangle.draw() ;
+        }
     }
 
     virtual double intersect(Ray ray, Color *color, int level){
         *color = this->color ;
-        //equation  t*t + 2(P0-O).D t + (P0-O).(P0-O)-r*r = 0 ;
-        ray.origin = ray.origin - reference_point; // P0-O 
-        double a = 1; 
-        double b = 2 * (ray.dir.dot(ray.origin));
-        double c = (ray.origin.dot(ray.origin)) - (length*length);
-
-        double discriminant = b*b - 4 * a * c;
-        double t = -1;
-        if (discriminant < 0)
-            return -1 ; 
-        // if(fabs(a) < 1e-5){
-            // t = -c/b;
-            // return t;
-        // }
-
-        double t1 = (-b - sqrt(discriminant)) / (2 * a);
-        double t2 = (-b + sqrt(discriminant)) / (2 * a);
-
-        if(t2<t1) 
-            swap(t1, t2);
-
-        if (t1 > 0)
-            return t1;
-        if (t2 > 0)
-            return t2;
-        
-        return -1;
+        double t = 1e18;
+        for(Triangle &triangle : triangle_primitives){
+            double tt = triangle.intersect(ray) ;
+            if( tt < 0 ) continue ;
+            t = min(t,tt) ;
+        }
+        t = (t == 1e18 || t < 0 ) ? -1 : t ;
+        return t;  
     }
 
-    friend std::istream &operator>>(std::istream &in, Pyramid &pyramid)
-    {
+    friend std::istream &operator>>(std::istream &in, Pyramid &pyramid){
         in >> pyramid.reference_point;
         in >> pyramid.width >> pyramid.height;
         in >> pyramid.color.R >> pyramid.color.G >> pyramid.color.B;
@@ -293,6 +386,8 @@ class Pyramid : public Object {
         pyramid.color.B *= 255.0;
         in >> pyramid.coefficients.ka >> pyramid.coefficients.kd >> pyramid.coefficients.ks >> pyramid.coefficients.alpha;
         in >> pyramid.shine;
+
+        pyramid = Pyramid(pyramid.reference_point, pyramid.width, pyramid.height, pyramid.color, pyramid.coefficients, pyramid.shine);
         return in;
     }
 
@@ -302,90 +397,57 @@ class Cube : public Object {
     public: 
     Cube() : Object() {}
 
-    Cube(Vector bottom_lower_left, double side, Color color, SurfaceProperties coefficients, int shininess)
-    {
+    Cube(Vector bottom_lower_left, double side, Color color, SurfaceProperties coefficients, int shininess){
         this->reference_point = bottom_lower_left;
         this->length = height;
         this->color = color;
         this->coefficients = coefficients;
         this->shine = shininess;
+
+        Vector A = bottom_lower_left + Vector(0,0,side) ;
+        Vector B = bottom_lower_left + Vector(side,0,side) ;
+        Vector C = bottom_lower_left + Vector(side,side,side) ;
+        Vector D = bottom_lower_left + Vector(0,side,side) ;
+        Vector E = bottom_lower_left + Vector(0,0,0) ;
+        Vector F = bottom_lower_left + Vector(side,0,0) ;
+        Vector G = bottom_lower_left + Vector(side,side,0) ;
+        Vector H = bottom_lower_left + Vector(0,side,0) ;
+
+        this->triangle_primitives.push_back( Triangle(A,B,C) ) ;
+        this->triangle_primitives.push_back( Triangle(A,C,D) ) ;
+        this->triangle_primitives.push_back( Triangle(E,F,G) ) ;
+        this->triangle_primitives.push_back( Triangle(E,G,H) ) ;
+        this->triangle_primitives.push_back( Triangle(A,B,F) ) ;
+        this->triangle_primitives.push_back( Triangle(A,F,E) ) ;
+        this->triangle_primitives.push_back( Triangle(B,C,G) ) ;
+        this->triangle_primitives.push_back( Triangle(B,G,F) ) ;
+        this->triangle_primitives.push_back( Triangle(C,D,H) ) ;
+        this->triangle_primitives.push_back( Triangle(C,H,G) ) ;
+        this->triangle_primitives.push_back( Triangle(D,A,E) ) ;
+        this->triangle_primitives.push_back( Triangle(D,E,H) ) ;
+
     }
 
     void draw(){
-        glBegin(GL_QUADS);
-        // front
-        GLCOLOR(color);
-        glVertex3f(reference_point.x(), reference_point.y(), reference_point.z());
-        glVertex3f(reference_point.x() + length, reference_point.y(), reference_point.z());
-        glVertex3f(reference_point.x() + length, reference_point.y() + length, reference_point.z());
-        glVertex3f(reference_point.x(), reference_point.y() + length, reference_point.z());
-        // back
-        GLCOLOR(color);
-        glVertex3f(reference_point.x(), reference_point.y(), reference_point.z() + length);
-        glVertex3f(reference_point.x() + length, reference_point.y(), reference_point.z() + length);
-        glVertex3f(reference_point.x() + length, reference_point.y() + length, reference_point.z() + length);
-        glVertex3f(reference_point.x(), reference_point.y() + length, reference_point.z() + length);
-        // left
-        GLCOLOR(color);
-        glVertex3f(reference_point.x(), reference_point.y(), reference_point.z());
-        glVertex3f(reference_point.x(), reference_point.y(), reference_point.z() + length);
-        glVertex3f(reference_point.x(), reference_point.y() + length, reference_point.z() + length);
-        glVertex3f(reference_point.x(), reference_point.y() + length, reference_point.z());
-        // right
-        GLCOLOR(color);
-        glVertex3f(reference_point.x() + length, reference_point.y(), reference_point.z());
-        glVertex3f(reference_point.x() + length, reference_point.y(), reference_point.z() + length);
-        glVertex3f(reference_point.x() + length, reference_point.y() + length, reference_point.z() + length);
-        glVertex3f(reference_point.x() + length, reference_point.y() + length, reference_point.z());
-        // top
-        GLCOLOR(color);
-        glVertex3f(reference_point.x(), reference_point.y() + length, reference_point.z());
-        glVertex3f(reference_point.x() + length, reference_point.y() + length, reference_point.z());
-        glVertex3f(reference_point.x() + length, reference_point.y() + length, reference_point.z() + length);
-        glVertex3f(reference_point.x(), reference_point.y() + length, reference_point.z() + length);
-        // bottom
-        GLCOLOR(color);
-        glVertex3f(reference_point.x(), reference_point.y(), reference_point.z());
-        glVertex3f(reference_point.x() + length, reference_point.y(), reference_point.z());
-        glVertex3f(reference_point.x() + length, reference_point.y(), reference_point.z() + length);
-        glVertex3f(reference_point.x(), reference_point.y(), reference_point.z() + length);
-
-        glEnd() ;
+        for(Triangle &triangle : triangle_primitives){
+            triangle.color = this->color ;
+            triangle.draw() ;
+        }
     }
 
     virtual  double intersect(Ray ray, Color *color, int level){
         *color = this->color ;
-        //equation  t*t + 2(P0-O).D t + (P0-O).(P0-O)-r*r = 0 ;
-        ray.origin = ray.origin - reference_point; // P0-O 
-        double a = 1; 
-        double b = 2 * (ray.dir.dot(ray.origin));
-        double c = (ray.origin.dot(ray.origin)) - (length*length);
-
-        double discriminant = b*b - 4 * a * c;
-        double t = -1;
-        if (discriminant < 0)
-            return -1 ; 
-        // if(fabs(a) < 1e-5){
-            // t = -c/b;
-            // return t;
-        // }
-
-        double t1 = (-b - sqrt(discriminant)) / (2 * a);
-        double t2 = (-b + sqrt(discriminant)) / (2 * a);
-
-        if(t2<t1) 
-            swap(t1, t2);
-
-        if (t1 > 0)
-            return t1;
-        if (t2 > 0)
-            return t2;
-        
-        return -1;
+        double t = 1e18;
+        for(Triangle &triangle : triangle_primitives){
+            double tt = triangle.intersect(ray) ;
+            if( tt < 0 ) continue ;
+            t = min(t,tt) ;
+        }
+        t = (t == 1e18 || t < 0) ? -1 : t ;
+        return t; 
     }
 
-    friend std::istream &operator>>(std::istream &in, Cube &cube)
-    {
+    friend std::istream &operator>>(std::istream &in, Cube &cube){
         in >> cube.reference_point;
         in >> cube.length; 
         in >> cube.color.R >> cube.color.G >> cube.color.B;
@@ -394,7 +456,46 @@ class Cube : public Object {
         cube.color.B *= 255.0;
         in >> cube.coefficients.ka >> cube.coefficients.kd >> cube.coefficients.ks >> cube.coefficients.alpha;
         in >> cube.shine;
+
+        cube = Cube(cube.reference_point, cube.length, cube.color, cube.coefficients, cube.shine);
         return in;
+    }
+};
+
+class Checkerboard : public Object {
+    public:
+    Vector pos;
+    double checkerboard_side;
+    double zFar;
+
+    Checkerboard(Vector &pos, double checkerboard_side,double zFar) : Object() {
+        this->pos = pos;
+        this->checkerboard_side = checkerboard_side;
+        this->zFar
+            = zFar;
+    }
+
+    Color getColor(int x,int y){
+        return (x+y)%2 == 0 ? BLACK : WHITE ;
+    }
+
+
+
+    void draw(){
+    } 
+
+
+    double intersect(Ray ray, Color *color, int level){
+        if( ray.dir.z() == 0 ) return -1 ; // parallel to plane (z=0) 
+
+        double t = -(ray.origin.z())/ray.dir.z() ;
+        if( t < 0 ) return -1 ;
+        Vector point = ray.origin + ray.dir*t ;
+        int x = ceil(point.x()/checkerboard_side);
+        int y = ceil(point.y()/checkerboard_side);
+        *color =  getColor(x,y) ;
+        cout<<"color : "<<*color<<endl;
+        return t ;
     }
 };
 

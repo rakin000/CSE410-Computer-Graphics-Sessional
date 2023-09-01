@@ -44,7 +44,7 @@ void input(string filename){
     
     int num_obj; 
     in>>num_obj ;
-
+    
     objects.resize(num_obj) ;
     for(int i=0;i<num_obj;i++){
         string obj_type ;
@@ -61,9 +61,10 @@ void input(string filename){
         else if( obj_type == "sphere") {
             objects[i] = new Sphere() ; 
             in>>*((Sphere*)objects[i]); 
-            cout << objects[i]->color.R << " " << objects[i]->color.G << " " << objects[i]->color.B << endl ;
+            // cout << objects[i]->color.R << " " << objects[i]->color.G << " " << objects[i]->color.B << endl ;
         }
     }
+    objects.push_back(new Checkerboard(pos,checkerboard_side,zFar)); 
 
     int num_light;
 	in >> num_light;
@@ -87,6 +88,7 @@ void input(string filename){
 
 int imageCount = 1;
 void save_frame(){
+    cout << "Capturing frame" <<endl;
     bitmap_image image(image_width,image_height);
     image.set_all_channels(0,0,0) ;
 
@@ -109,40 +111,32 @@ void save_frame(){
             Ray ray(pos,pixel-pos);
 			Color color;
 
-			// cout<<"Ray direction "<<ray.dir<<endl;
-
 			tMin = -1;
 			nearestObjectIndex = -1;
 			for(int k=0;k<(int)objects.size();k++){
 				// t = objects[k]->intersect(ray,color, 0);
                 t = objects[k]->intersect(ray,&color,0) ;
-				// cout<<"After Color "<<color.R<<" "<<color.B<<" "<<color.B<<endl;
 				if(t>0 && (nearestObjectIndex == -1 || t<tMin) )
 					tMin = t , nearestObjectIndex = k;
 			}
 
 			// if nearest object is found, then shade the pixel
 			if(nearestObjectIndex != -1){
-				// cout<<"Object "<<nearestObjectIndex<<" intersected"<<endl;
-				// color = objects[nearestObjectIndex]->color;
 				color = {0,0,0} ;
-				// cout<<"Before Color "<<color.r<<" "<<color.g<<" "<<color.b<<endl;
-				// double t = objects[nearestObjectIndex]->intersect(ray,color, 1);
 				double t = objects[nearestObjectIndex]->intersect(ray,&color,0);
 
-				// if(color.R > 255) color.R = 255;
-				// if(color.G > 255) color.G = 255;
-				// if(color.B > 255) color.B = 255;
-// 
-				// if(color.R < 0) color.R = 0;
-				// if(color.G < 0) color.G = 0;
-				// if(color.B < 0) color.B = 0;
+				if(color.R > 255) color.R = 255;
+				if(color.G > 255) color.G = 255;
+				if(color.B > 255) color.B = 255;
+				if(color.R < 0) color.R = 0;
+				if(color.G < 0) color.G = 0;
+				if(color.B < 0) color.B = 0;
 				
-				// cout<<"After Color "<<color.R<<" "<<color.B<<" "<<color.B<<endl;
 				image.set_pixel(i, j, color.R, color.G, color.B);
-				image.set_pixel(i, j, objects[nearestObjectIndex]->color.R, objects[nearestObjectIndex]->color.G, objects[nearestObjectIndex]->color.B);
 			}
 		}
+
+        showLoadingScreen(i,image_width,"Saving image----") ;
 	}
 
 	// image.save_image("Output_1"+to_string(imageCount)+".bmp");
@@ -374,5 +368,7 @@ int main(int argc, char** argv){
     glutMouseFunc(mouseListener);
     initGL();
     glutMainLoop();
+
+    objects.clear();
     return 0;
 }
