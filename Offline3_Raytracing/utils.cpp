@@ -494,7 +494,7 @@ class Checkerboard : public Object {
         int x = ceil(point.x()/checkerboard_side);
         int y = ceil(point.y()/checkerboard_side);
         *color =  getColor(x,y) ;
-        cout<<"color : "<<*color<<endl;
+        // cout<<"color : "<<*color<<endl;
         return t ;
     }
 };
