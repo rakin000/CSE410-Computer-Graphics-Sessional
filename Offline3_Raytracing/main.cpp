@@ -138,7 +138,7 @@ Color ray_tracing(Ray ray, int level, bool reflect = 0){
 
         if(!isObscured){
             double diffuse_multiplier_t = max(0.0,-lightray.dir.dot(normal));
-            Ray reflection = Ray(intersection_point, lightray.dir - normal * (2 * lightray.dir.dot(normal)) ); 
+            Ray reflection = Ray(intersection_point, normal * (2 * lightray.dir.dot(normal)) - lightray.dir  ); 
             reflectedRays.push_back(reflection) ;
             double specular_multiplier_t = pow(max(0.0, -ray.dir.dot(reflection.dir)), nearestObject->shine);
 
@@ -149,8 +149,8 @@ Color ray_tracing(Ray ray, int level, bool reflect = 0){
 
     color = color * nearestObject->coefficients.ka + color * diffuse_multiplier + color * specular_multiplier ; 
     for(Ray &ray: reflectedRays) 
-        color = color + ray_tracing(ray,level-1,true);
-    color = (reflect) ? color * nearestObject->coefficients.alpha : color; 
+        color = color + ray_tracing(ray,level-1,true)*nearestObject->coefficients.alpha;
+    // color = (reflect) ? color * nearestObject->coefficients.alpha : color; 
     return color ;
 }
 
@@ -179,7 +179,8 @@ void save_frame(){
 			
             Ray ray(pos,pixel-pos);
 			
-            Color color = ray_tracing(ray,2) ;         
+            Color color = ray_tracing(ray,recursion_level) ;         
+            color.fixRange();
 			image.set_pixel(i, j, color.R, color.G, color.B);
 		}
 
