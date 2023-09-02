@@ -1,12 +1,10 @@
+#include <bits/stdc++.h>
 #include <GL/glut.h>
-#include "transform.cpp"
-#include "math.h"
-
-
+using namespace std; 
 
 #define GLCOLOR(color) glColor3f( (color).R/255.0,(color).G/255.0,(color).B/255.0)
 const double EPSILON = 1e-4;
-void showLoadingScreen(int step, int totalSteps, string message = "Loading...") {
+void showLoadingScreen(int step, int totalSteps, string message = string("Loading...") ) {
         if( step == totalSteps ) {
             std::cout << message << " complete!" << std::endl;
             return;
@@ -15,7 +13,6 @@ void showLoadingScreen(int step, int totalSteps, string message = "Loading...") 
         float progress = float(step) / totalSteps * 100;
         std::cout << message << progress << "%";
 
-        // Print some animation, e.g., spinning wheel
         switch (step % 4) {
             case 0: std::cout << " |  "; break;
             case 1: std::cout << " /  "; break;
@@ -24,10 +21,117 @@ void showLoadingScreen(int step, int totalSteps, string message = "Loading...") 
         }
 
         std::cout << "\r";
-        // std::this_thread::sleep_for(std::chrono::milliseconds(100)); // 100 ms delay
-    // std::cout << message << " complete!" << std::endl;
 }
 
+
+#define DEG2RAD (M_PI/180.0)
+
+struct Vector{
+    double X,Y,Z,N;  
+
+    Vector(double x,double y,double z,double n){
+        this->X = x; 
+        this->Y = y;
+        this->Z = z;
+        this->N = n;
+    }
+    Vector(double x,double y,double z):
+        Vector(x,y,z,1)
+    {
+    }
+    Vector():
+        Vector(0,0,0)
+    {
+    }
+    
+    
+    Vector(const Vector &rhs){
+        this->X = rhs.X;
+        this->Y = rhs.Y;
+        this->Z = rhs.Z;
+        this->N = rhs.N;
+    }
+
+    Vector& operator=(const Vector& rhs) {
+        if (this != &rhs) {
+            this->X = rhs.X;
+            this->Y = rhs.Y;
+            this->Z = rhs.Z;
+            this->N = rhs.N;
+        }
+        return *this;
+    }
+
+    double x(){ return X; }
+    double y(){ return Y; }
+    double z(){ return Z; }
+    double abs(){
+        return sqrt(X*X + Y*Y + Z*Z) ;}
+
+    Vector cross(Vector rhs){
+        return Vector(Y*rhs.Z-Z*rhs.Y, -(X*rhs.Z-Z*rhs.X), X*rhs.Y-Y*rhs.X) ;
+    }
+    double dot(Vector rhs){
+        return X*rhs.X+Y*rhs.Y+Z*rhs.Z ;
+    }
+    Vector operator+(Vector rhs){
+        return Vector(X+rhs.X,Y+rhs.Y,Z+rhs.Z) ;
+    }
+    Vector operator+(double val){
+        return Vector(X+val,Y+val,Z+val) ;
+    }
+    friend Vector operator+(double val, Vector v){
+        return v+val;
+    }
+    Vector operator-(Vector rhs){
+        return Vector(X-rhs.X,Y-rhs.Y,Z-rhs.Z) ;
+    }
+    Vector operator-(double val){
+        return Vector(X-val,Y-val,Z-val) ;
+    }
+    friend Vector operator-(double val, Vector v){
+        return v-val;
+    }
+    Vector operator-(){
+        return Vector(-X,-Y,-Z) ;
+    }
+    Vector operator*(double val){
+        return Vector(val*X,val*Y,val*Z) ;
+    }
+    Vector operator/(double val){
+        return Vector(X/val,Y/val,Z/val) ;
+    }
+    double angle(Vector rhs){
+        return acos( dot(rhs) / (abs() * rhs.abs()) ) ;
+    }
+    void normalize(){
+        double d = X*X + Y*Y + Z*Z ; 
+        d = sqrt(d) ;
+        X /= d ;
+        Y /= d ;
+        Z /= d ;
+        N = 1; 
+    }
+    void scaledown(){
+        X /= N;
+        Y /= N;
+        Z /= N;
+        N = 1;
+    }
+    friend double angle(Vector a, Vector b){
+        return acos( a.dot(b) / (a.abs() * b.abs()) ) ;
+    }
+    friend istream& operator>>(istream &in, Vector &p){
+        in>>p.X>>p.Y>>p.Z;
+        return in;
+    }
+    friend ostream& operator<<(ostream &out,Vector &p){
+        out<<p.X<<" "<<p.Y<<" "<<p.Z<<endl;;
+        return out;
+    }
+};
+
+ 
 struct Color{
     double R;
     double G;
@@ -136,13 +240,16 @@ class Triangle {   // primitive
 public:
     Vector A,B,C ;
     Vector normal ;
+    Vector AB, AC ;
     Color color ;
 
     Triangle(Vector A, Vector B, Vector C, Color color = BLACK){
         this->A = A ;
         this->B = B ;
         this->C = C ; 
-        this->normal = (B-A).cross(C-A) ;
+        this->AB = B-A ;
+        this->AC = C-A ;
+        this->normal = (AB).cross(AC) ;
         this->normal.normalize() ;
         this->color = color;
     }
@@ -180,91 +287,54 @@ public:
         glEnd();
     }
 
+    double intersect2(Ray &r){
+        Vector pvec = r.dir.cross(AC);
 
-    double intersect(Ray &ray){
-        Vector edge1, edge2, h, s, q;
-        double a, f, u, v;
-        edge1 = B-A ;
-        edge2 = C-A;
-        h = ray.dir.cross(edge2);
-        a = edge1.dot(h);
+        float det = AB.dot(pvec);
 
-        if (a > -EPSILON && a < EPSILON)
-            return -1;    // This ray is parallel to this triangle.
-
-        f = 1.0 / a;
-        s = ray.origin - A;
-        u = f * s.dot(h);
-
-        if (u < 0.0 || u > 1.0)
+        if (det < 0.000001)
             return -1;
 
-        q = s.cross(edge1);
-        v = f * ray.dir.dot(q);
+        float invDet = 1.0 / det;
+        Vector tvec = r.origin-A;
 
-        if (v < 0.0 || u + v > 1.0)
+        float u = tvec.dot(pvec) * invDet;
+
+        if (u < 0 || u > 1)
+            return -1;
+        Vector qvec = tvec.cross(AB);
+        float v = r.dir.dot(qvec) * invDet;
+
+        if (v < 0 || u + v > 1)
             return -1;
 
-        // At this stage we can compute t to find out where the intersection point is on the line.
-        float t = f * edge2.dot(q);
+        return AC.dot(qvec) * invDet;
+    }
 
-        if (t > EPSILON){ // ray intersection {
+
+    Vector intersectionPoint ;
+    double getTwiceArea(Vector &a,Vector &b,Vector &c) {
+        return ((b-a).cross(c-a)).abs() ;
+    }
+    bool isInside(Vector &p) {
+        return abs( getTwiceArea(A, B, p) + getTwiceArea(A, C, p) + getTwiceArea(B, C, p) - getTwiceArea(A, B, C)) < EPSILON;
+    }
+    double intersect(Ray &ray) {
+        // Point d = ray.dir;
+        Vector normal = this->normal ;// normal = getNormal();
+        double dotP = normal.dot(ray.dir);
+        if (dotP > EPSILON) normal = normal * -1;
+        double y = normal.dot(A);
+        if (abs(dotP) < EPSILON) return -1;
+        double t = ( y - normal.dot(ray.origin) ) / (dotP);
+        intersectionPoint = ray.origin + ray.dir * t;
+
+        if (isInside(intersectionPoint)) 
             return t;
-        }
-        else // This means that there is a line intersection but not a ray intersection.
-            return -1;
+        
+
+        return -1;
     }
-
-
-    double intersect2(
-        Ray &ray)
-    {
-        float t ; 
-        Vector vec1 = B - A;
-        Vector vec2 = C - A;
-        // no need to normalize
-        Vector N = vec1.cross(vec2); // N
-        float area2 = N.abs();
-        // Step 1: finding P
-        
-        // check if the ray and plane are parallel.
-        float NdotRayDirection = N.dot(ray.dir);
-        if (fabs(NdotRayDirection) < EPSILON) // almost 0
-            return -1; // they are parallel, so they don't intersect! 
-
-        // compute d parameter using equation 2
-        float d = -N.dot(A);
-        
-        t = -(N.dot(ray.origin) + d) / NdotRayDirection;
-        
-        if (t < 0) return -1; // the triangle is behind
-    
-        // compute the intersection point using equation 1
-        Vector P = ray.origin + ray.dir * t;
-    
-        Vector nC; // vector perpendicular to triangle's plane
-    
-        Vector edge0 = B - A; 
-        Vector vp0 = P - A;
-        nC = edge0.cross(vp0);
-        if (N.dot(nC) < 0) return -1; // P is on the right side
-    
-        // edge 1
-        Vector edge1 = C - B; 
-        Vector vp1 = P - B;
-        nC = edge1.cross(vp1);
-        if (N.dot(nC) < 0)  return -1; // P is on the right side
-    
-        // edge 2
-        Vector edge2 = A - C ; 
-        Vector vp2 = P - C;
-        nC = edge2.cross(vp2);
-        if (N.dot(nC) < 0) return -1; // P is on the right side;
-
-
-        return t; // this ray hits the triangle
-    }
-
 };
 
 
@@ -292,10 +362,10 @@ class Object{
     }
     ~Object(){
         // for(Triangle &triangle : triangle_primitives)
-            // delete triangle ;
+        //     delete triangle ;
     }
     virtual void draw() = 0 ;
-    virtual  double intersect(Ray ray, Color *color, Vector &normal) = 0 ;
+    virtual  double intersect(Ray ray, Color *color, Vector *normal) = 0 ;
 };
 
 class Sphere : public Object{
@@ -349,8 +419,8 @@ class Sphere : public Object{
         }
     }
 
-    virtual double intersect(Ray ray, Color *color, Vector &normal){
-        *color = this->color; 
+    virtual double intersect(Ray ray, Color *color, Vector *normal){
+        if( color != nullptr ) *color = this->color; 
 
         //equation  t*t + 2(P0-O).D t + (P0-O).(P0-O)-r*r = 0 ;
         Vector P0_O  = ray.origin - reference_point; // P0-O 
@@ -375,14 +445,18 @@ class Sphere : public Object{
 
         if (t1 > 0){
             Vector intersectionPoint = ray.origin + ray.dir * t1;
-            normal = intersectionPoint-reference_point; 
-            normal.normalize();
+            if( normal != nullptr ) {
+                *normal = intersectionPoint-reference_point; 
+                normal->normalize();
+            }
             return t1;
         }
         if (t2 > 0){
             Vector intersectionPoint = ray.origin + ray.dir * t2;
-            normal = intersectionPoint-reference_point; 
-            normal.normalize();
+            if( normal != nullptr ) {
+                *normal = intersectionPoint-reference_point; 
+                normal->normalize();
+            }
             return t2;
         }
         
@@ -441,16 +515,18 @@ class Pyramid : public Object {
         }
     }
 
-    double intersect(Ray ray, Color *color, Vector &normal){
+    double intersect(Ray ray, Color *color, Vector *normal){
         // return -1; 
-        *color = this->color ;
+        if( color != nullptr ) *color = this->color ;
         double t = 1e18;
         for(Triangle &triangle : triangle_primitives){
             double tt = triangle.intersect(ray) ;
             if( tt < 0 ) continue ;
             if( tt < t ){
-                normal = triangle.normal ;
-                normal.normalize() ;
+                if( normal != nullptr) {
+                    *normal = triangle.normal ;
+                    normal->normalize() ;
+                }
                 t = tt ;
             }
         }
@@ -522,16 +598,18 @@ class Cube : public Object {
         }
     }
 
-    double intersect(Ray ray, Color *color, Vector &normal){
+    double intersect(Ray ray, Color *color, Vector *normal){
         // return -1; 
-        *color = this->color ;
+        if( color != nullptr ) *color = this->color ;
         double t = 1e18;
         for(Triangle &triangle : triangle_primitives){
             double tt = triangle.intersect(ray) ;
             if( tt < 0 ) continue ;
             if( tt < t ){
-                normal = triangle.normal ;
-                normal.normalize() ;
+                if( normal != nullptr){
+                    *normal = triangle.normal ;
+                    normal->normalize() ;
+                }
                 t = tt ;
             }
         }
@@ -664,7 +742,7 @@ class Checkerboard : public Object {
     } 
 
 
-    double intersect(Ray ray, Color *color, Vector &normal){
+    double intersect(Ray ray, Color *color, Vector *normal){
         // if( abs(ray.dir.z()) < EPSILON ) return -1 ; // parallel to plane (z=0) 
         if( ray.dir.z() == 0.0) return -1 ;
 
@@ -673,8 +751,8 @@ class Checkerboard : public Object {
         Vector point = ray.origin + ray.dir*t ;
         int x = ceil(point.x()/checkerboard_side);
         int y = ceil(point.y()/checkerboard_side);
-        *color =  getColor(x,y) ;
-        normal = Vector(0,0,1) ;
+        if( color != nullptr ) *color =  getColor(x,y) ;
+        if( normal != nullptr ) *normal = Vector(0,0,1) ;
         // cout<<"color : "<<*color<<endl;
         return t ;
     }

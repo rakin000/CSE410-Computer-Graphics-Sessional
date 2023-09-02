@@ -1,5 +1,3 @@
-#include <bits/stdc++.h>
-#include <GL/glut.h>
 #include "utils.cpp"
 #include "bitmap_image.hpp" 
 
@@ -9,7 +7,7 @@ using namespace std ;
 #define TO_RADIAN(deg) ((deg)*(M_PI/180.0))
 #define DEG2RAD (M_PI/180.0) 
 
-double window_height = 512, window_width = 512; 
+double window_height = 1024, window_width = 1024; 
 Vector pos(50,50,20);   // position of the eye
 Vector l(-1/sqrt(2), -1/sqrt(2),0 );     // look/forward direction
 Vector r(-1/sqrt(2), 1/sqrt(2), 0);     // right direction
@@ -68,7 +66,7 @@ void input(string filename){
     checkerboard_ks = 0 ;
     Object *checkerboard = new Checkerboard(checkerboard_side,{checkerboard_ka,checkerboard_kd,checkerboard_ks,checkerboard_reflectance}) ;
     objects.push_back(checkerboard); 
-
+    // cout<<"Objects size: " << objects.size()<<endl;
     int num_light;
 	in >> num_light;
 
@@ -89,7 +87,7 @@ void input(string filename){
 }
 
 
-Color ray_tracing(Ray ray, int level, bool reflect = false ){
+Color ray_tracing(Ray ray, int level ){
     if(level <= 0) return BLACK;
     // find the nearest object that intersects with the ray 
     Object *nearestObject = nullptr ;
@@ -98,7 +96,7 @@ Color ray_tracing(Ray ray, int level, bool reflect = false ){
     Color color,minColor;
     Vector normal,minNormal; 
     for(int k=0;k<(int)objects.size();k++){
-        t = objects[k]->intersect(ray,&color,normal) ;
+        t = objects[k]->intersect(ray,&color,&normal) ;
         if(t>0 && (nearestObject== nullptr || t<tMin) ){
             tMin = t; 
             nearestObject=objects[k]; 
@@ -110,33 +108,27 @@ Color ray_tracing(Ray ray, int level, bool reflect = false ){
     color = minColor ;
     normal = minNormal; 
     if( nearestObject == nullptr || tMin <= 0 ) return BLACK; 
-    // if( level == 0 ) return color ;
+    // if( level == 1 ) return color ;
     // if an intersection is found, then shade the pixel; 
-    // vector<Ray> reflectedrays;
     Vector intersection_point = ray.origin + ray.dir * tMin;
-    Color tempColor ;
-    Vector tempNormal ;
     double lambert = 0 ;
     double phong = 0 ;
 
     for(int i=0;i<(int)lights.size();i++){
         Ray lightray(lights[i]->pos,intersection_point-lights[i]->pos);
-        double tLightray = nearestObject->intersect(lightray,&tempColor,tempNormal) ;
+        double tLightray = nearestObject->intersect(lightray,nullptr,nullptr) ;
 
-        // if( (lights[i]->pos - intersection_point).abs() <= eps ) continue ;
 
         if( lights[i]->type == Light::SPOTLIGHT ){
             double theta = (1.0/DEG2RAD) * angle(lightray.dir,((Spotlight*)lights[i])->dir);
             if( theta > ((Spotlight*)lights[i])->cutoffAngle ) continue;
         }
 
-        // double t2 = (intersection_point - lights[i]->pos).abs();
-        // if(t2 < EPSILON) continue;
 
         bool isObscured = 0; 
         for(int k=0;k<(int)objects.size();k++){
             if( objects[k] == nearestObject ) continue ;
-            t = objects[k]->intersect(lightray,&tempColor,tempNormal) ;
+            t = objects[k]->intersect(lightray,nullptr,nullptr) ;
             if(t>0 && t<tLightray){
                 isObscured = 1; 
                 break; 
@@ -149,67 +141,128 @@ Color ray_tracing(Ray ray, int level, bool reflect = false ){
             lambert += max(0.0,-lightray.dir.dot(normal))*scaling_factor;
             Ray reflection = Ray(intersection_point, lightray.dir -  normal*(2.0 * lightray.dir.dot(normal)) ); 
             phong += pow(max(0.0, -ray.dir.dot(reflection.dir)), nearestObject->shine)*scaling_factor;
-            
-            // reflection.origin = reflection.origin + reflection.dir * (EPSILON);
-            // Color reflected_color = ray_tracing(reflection,level-1,true);
-            // color = color + reflected_color ;
-            // reflectedrays.push_back(reflection);
         }
     }
     color = color * ( nearestObject->coefficients.ka + 
                       nearestObject->coefficients.kd * lambert + 
                       nearestObject->coefficients.ks * phong ); 
-    // color = color + color * nearestObject->coefficients.reflectance;  
     Ray reflected_ray(intersection_point, ray.dir-normal*(2.0*(ray.dir.dot(normal))) );
     reflected_ray.origin = reflected_ray.origin + reflected_ray.dir * (EPSILON);
-    // reflectedrays.push_back(reflected_ray);
-    Color reflected_color = ray_tracing(reflected_ray,level-1,true);
-    // for (Ray &ray : reflectedrays)
-        // reflected_color = reflected_color + ray_tracing(ray,level-1,true);
+    Color reflected_color = ray_tracing(reflected_ray,level-1);
     color = color + reflected_color*nearestObject->coefficients.reflectance;
-    // reflected_color
-    // return reflect ? color * nearestObject->coefficients.reflectance  : color;
-    // return color * nearestObject->coefficients.reflectance ;
     return color ; // + color * nearestObject->coefficients.reflectance;
 }
 
-
 int imageCount = 1;
-void save_frame(){
+
+void save_frame(Vector position,Vector look,Vector right,Vector up){
     bitmap_image image(image_width,image_height);
     image.set_all_channels(0,0,0) ;
 
     double distance = (window_height/2.0) / tan(DEG2RAD * fovY / 2.0) ;
 
-    Vector top_left = pos + (l*distance) + (u * (window_height/2.0) - (r*(window_width/2.0)) );  
+    Vector top_left = position + (look*distance) + (up * (window_height/2.0) - (right*(window_width/2.0)) );  
 
     double dx = window_width/ image_width ; 
     double dy = window_height/image_height; 
 
-    top_left = top_left + (r * (dx / 2.0)) - (u * (dy/2.0))  ;   
+    top_left = top_left + (right * (dx / 2.0)) - (up * (dy/2.0))  ;   
 
     int nearestObjectIndex = -1;
 	double t,tMin;
 
+	Vector pixel = top_left ; // + (r* (dx * i) ) - (u * (dy * j)) ;
 	for(int i=0;i<image_width;i++){
 		for(int j=0;j<image_height;j++){
-			Vector pixel = top_left + (r* (dx * i) ) - (u * (dy * j)) ;
-			
-            Ray ray(pos,pixel-pos);
+            pixel = top_left - (up * dy * j) + (right * dx * i) ;
+            Ray ray(position,pixel-position);
 			
             Color color = ray_tracing(ray,recursion_level) ;         
             color.fixRange();
 			image.set_pixel(i, j, color.R, color.G, color.B);
+            
 		}
 
         showLoadingScreen(i,image_width-1,"Saving image----") ;
 	}
 
 	image.save_image("out"+to_string(imageCount)+".bmp");
-	// image.save_image("out.bmp");
-	imageCount++;
+    imageCount++;
 }
 
+struct ThreadArgs {
+    Vector pos, l, r, u;
+};
+pthread_mutex_t image_count_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t color_mutex = PTHREAD_MUTEX_INITIALIZER;
+void* save_frame_thread(void* args) {
+    ThreadArgs* thread_args = (ThreadArgs*)args;
+    
+    // save_frame(thread_args->pos, thread_args->l, thread_args->r, thread_args->u);
+    Vector position = thread_args->pos;
+    Vector look = thread_args->l;
+    Vector right = thread_args->r;
+    Vector up = thread_args->u;
+
+    bitmap_image image(image_width,image_height);
+    image.set_all_channels(0,0,0) ;
+
+    double distance = (window_height/2.0) / tan(DEG2RAD * fovY / 2.0) ;
+
+    Vector top_left = position + (look*distance) + (up * (window_height/2.0) - (right*(window_width/2.0)) );  
+
+    double dx = window_width/ image_width ; 
+    double dy = window_height/image_height; 
+
+    top_left = top_left + (right * (dx / 2.0)) - (up * (dy/2.0))  ;   
+
+    int nearestObjectIndex = -1;
+	double t,tMin;
+
+	Vector pixel = top_left ; // + (r* (dx * i) ) - (u * (dy * j)) ;
+	for(int i=0;i<image_width;i++){
+		for(int j=0;j<image_height;j++){
+            pixel = top_left - (up * dy * j) + (right * dx * i) ;
+            Ray ray(position,pixel-position);
+			
+            Color color = ray_tracing(ray,recursion_level) ;         
+            color.fixRange();
+			image.set_pixel(i, j, color.R, color.G, color.B);
+            
+		}
+
+        showLoadingScreen(i,image_width-1,"Saving image----") ;
+	}
+
+    while (pthread_mutex_lock(&image_count_mutex) != 0) {
+        usleep(1000); // Sleep for 1 millisecond (adjust as needed)
+    }
+	image.save_image("out"+to_string(imageCount)+".bmp");
+    imageCount++;
+    pthread_mutex_unlock(&image_count_mutex);
+
+    pthread_exit(NULL);
+}
+
+int save_frame_t(){
+    pthread_t *thread = new pthread_t();
+    // while(pthread_mutex_lock(&color_mutex) != 0) {
+    //     usleep(1000);
+    // }
+    ThreadArgs thread_args = {pos, l, r, u};
+    // pthread_mutex_unlock(&color_mutex);
+    int result = pthread_create(thread, NULL, save_frame_thread, (void*)&thread_args);
+    if (result) {
+        std::cerr << "Error creating thread " << pos << ": " << result << std::endl;
+        return -1;
+    }
+    return 0 ;
+}
+
+int save_frame(){
+    save_frame(pos, l, r, u);
+    return 0;
+}
 
 void drawAxes() {
     glLineWidth(3);
@@ -274,14 +327,13 @@ void display(void){
 }
 
 
-
-void rotate(Vector &vec,Vector &axis,double angle){
-    vec = Matrix::R(vec,axis,angle);
+void rotate(Vector &x,Vector &a,double theta){
+    x = x*cos(DEG2RAD*theta) + a*((1.0-cos(DEG2RAD*theta))*(a.dot(x))) + a.cross(x)*sin(DEG2RAD*theta) ; 
 }
 
 
 void keyboardListener(unsigned char key, int x,int y){
-    double ROT_ANG = 15 ;
+    double ROT_ANG = 10 ;
 	switch(key){
 		case '0':
 			// capture();
@@ -416,7 +468,7 @@ int main(int argc, char** argv){
     if( argc > 1 )
         input(argv[1]) ;
     else input("description.txt") ;
-    
+
     glutInit(&argc, argv);
     // glutInitDisplayMode(GLUT_SINGLE);
     glutInitWindowSize(window_width, window_height);
@@ -431,6 +483,9 @@ int main(int argc, char** argv){
     initGL();
     glutMainLoop();
 
-    objects.clear();
+    for(Object *obj: objects)
+        delete obj ;
+    for(Light *light: lights)
+        delete light ;
     return 0;
 }
