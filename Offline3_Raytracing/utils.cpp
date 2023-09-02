@@ -5,7 +5,7 @@
 
 
 #define GLCOLOR(color) glColor3f( (color).R/255.0,(color).G/255.0,(color).B/255.0)
-
+const double EPSILON = 1e-4;
 void showLoadingScreen(int step, int totalSteps, string message = "Loading...") {
         if( step == totalSteps ) {
             std::cout << message << " complete!" << std::endl;
@@ -181,8 +181,7 @@ public:
     }
 
 
-    const float EPSILON = 0.0000001;
-    double intersect2(Ray &ray){
+    double intersect(Ray &ray){
         Vector edge1, edge2, h, s, q;
         double a, f, u, v;
         edge1 = B-A ;
@@ -217,10 +216,10 @@ public:
     }
 
 
-    double intersect(
+    double intersect2(
         Ray &ray)
     {
-        double t ; 
+        float t ; 
         Vector vec1 = B - A;
         Vector vec2 = C - A;
         // no need to normalize
@@ -351,6 +350,7 @@ class Sphere : public Object{
     }
 
     virtual double intersect(Ray ray, Color *color, Vector &normal){
+        // return -1; 
         *color = this->color; 
 
         //equation  t*t + 2(P0-O).D t + (P0-O).(P0-O)-r*r = 0 ;
@@ -443,6 +443,7 @@ class Pyramid : public Object {
     }
 
     double intersect(Ray ray, Color *color, Vector &normal){
+        // return -1; 
         *color = this->color ;
         double t = 1e18;
         for(Triangle &triangle : triangle_primitives){
@@ -538,6 +539,90 @@ class Cube : public Object {
         t = (t == 1e18 || t < 0) ? -1 : t ;
         return t; 
     }
+
+
+    double intersect2(Ray ray, Color *color, Vector& normal) {
+        float tmin, tmax, tymin, tymax, tzmin, tzmax;
+        // Calculate the intersection distances on each axis (x, y, z)
+        Vector minPoint = reference_point ;
+        Vector maxPoint = reference_point + Vector(length,length,length) ;
+
+        if (ray.dir.x() >= 0) {
+            tmin = (minPoint.x() - ray.origin.x()) / ray.dir.x();
+            tmax = (maxPoint.x() - ray.origin.x()) / ray.dir.x();
+        } else {
+            tmin = (maxPoint.x() - ray.origin.x()) / ray.dir.x();
+            tmax = (minPoint.x() - ray.origin.x()) / ray.dir.x();
+        }
+
+        if (ray.dir.y() >= 0) {
+            tymin = (minPoint.y() - ray.origin.y()) / ray.dir.y();
+            tymax = (maxPoint.y() - ray.origin.y()) / ray.dir.y();
+        } else {
+            tymin = (maxPoint.y() - ray.origin.y()) / ray.dir.y();
+            tymax = (minPoint.y() - ray.origin.y()) / ray.dir.y();
+        }
+
+        if ((tmin > tymax) || (tymin > tmax))
+            return -1;
+
+        if (tymin > tmin)
+            tmin = tymin;
+        if (tymax < tmax)
+            tmax = tymax;
+
+        if (ray.dir.z() >= 0) {
+            tzmin = (minPoint.z() - ray.origin.z()) / ray.dir.z();
+            tzmax = (maxPoint.z() - ray.origin.z()) / ray.dir.z();
+        } else {
+            tzmin = (maxPoint.z() - ray.origin.z()) / ray.dir.z();
+            tzmax = (minPoint.z() - ray.origin.z()) / ray.dir.z();
+        }
+
+        if ((tmin > tzmax) || (tzmin > tmax))
+            return -1;
+
+        if (tzmin > tmin)
+            tmin = tzmin;
+        if (tzmax < tmax)
+            tmax = tzmax;
+
+        if (tmax < 0)
+            return -1;
+
+        // Calculate the intersection point and normal
+        Vector intersectionPoint = ray.origin + ray.dir * tmin;
+
+        if (tmin == tmax) {
+            if (tmin == (minPoint.x() - ray.origin.x()) / ray.dir.x())
+                normal = Vector(-1, 0, 0);
+            else if (tmin == (maxPoint.x() - ray.origin.x()) / ray.dir.x())
+                normal = Vector(1, 0, 0);
+            else if (tmin == (minPoint.y() - ray.origin.y()) / ray.dir.y())
+                normal = Vector(0, -1, 0);
+            else if (tmin == (maxPoint.y() - ray.origin.y()) / ray.dir.y())
+                normal = Vector(0, 1, 0);
+            else if (tmin == (minPoint.z() - ray.origin.z()) / ray.dir.z())
+                normal = Vector(0, 0, -1);
+            else if (tmin == (maxPoint.z() - ray.origin.z()) / ray.dir.z())
+                normal = Vector(0, 0, 1);
+        } else {
+            if (tmin == (minPoint.x() - ray.origin.x()) / ray.dir.x())
+                normal = Vector(-1, 0, 0);
+            else if (tmin == (maxPoint.x() - ray.origin.x()) / ray.dir.x())
+                normal = Vector(1, 0, 0);
+            else if (tmin == (minPoint.y() - ray.origin.y()) / ray.dir.y())
+                normal = Vector(0, -1, 0);
+            else if (tmin == (maxPoint.y() - ray.origin.y()) / ray.dir.y())
+                normal = Vector(0, 1, 0);
+            else if (tmin == (minPoint.z() - ray.origin.z()) / ray.dir.z())
+                normal = Vector(0, 0, -1);
+            else if (tmin == (maxPoint.z() - ray.origin.z()) / ray.dir.z())
+                normal = Vector(0, 0, 1);
+        }
+        *color = this->color;
+        return tmin;
+    }
     friend std::istream &operator>>(std::istream &in, Cube &cube){
         in >> cube.reference_point;
         in >> cube.length; 
@@ -581,10 +666,11 @@ class Checkerboard : public Object {
 
 
     double intersect(Ray ray, Color *color, Vector &normal){
-        if( ray.dir.z() == 0 ) return -1 ; // parallel to plane (z=0) 
+        // if( abs(ray.dir.z()) < EPSILON ) return -1 ; // parallel to plane (z=0) 
+        if( ray.dir.z() == 0.0) return -1 ;
 
-        double t = -(ray.origin.z())/ray.dir.z() ;
-        if( t < 0 ) return -1 ;
+        double t = -(ray.origin.z()/ray.dir.z()) ;
+        if( t < 0.0 ) return -1 ;
         Vector point = ray.origin + ray.dir*t ;
         int x = ceil(point.x()/checkerboard_side);
         int y = ceil(point.y()/checkerboard_side);
@@ -646,3 +732,28 @@ struct Spotlight : Light{
     }
 
 };
+
+
+void utiltest(){
+    Vector o1(1,2,3) ;
+    Vector d1(12,234,-3) ;
+
+    Ray r1(o1,d1) ; 
+
+    cout << r1 << endl; 
+    Vector intersectionPoint = r1.origin + r1.dir * 3 ;
+    cout << intersectionPoint << endl; 
+    Vector normal(0,0,1) ;
+    Ray reflectedR1( intersectionPoint, r1.dir - normal * 2.0 * r1.dir.dot(normal) ) ;
+
+
+
+    cout << reflectedR1 <<endl ;
+    reflectedR1.origin = reflectedR1.origin - reflectedR1.dir * .00012; 
+    cout << reflectedR1 <<endl ;
+
+    cout<< d1.dot(normal) << endl; 
+    cout<< -d1.dot(normal) << endl; 
+
+
+}

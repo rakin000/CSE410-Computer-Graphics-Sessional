@@ -9,8 +9,8 @@ using namespace std ;
 #define TO_RADIAN(deg) ((deg)*(M_PI/180.0))
 #define DEG2RAD (M_PI/180.0) 
 
-double window_height = 1024, window_width = 1024; 
-Vector pos(200,0,10);   // position of the eye
+double window_height = 512, window_width = 512; 
+Vector pos(50,50,20);   // position of the eye
 Vector l(-1/sqrt(2), -1/sqrt(2),0 );     // look/forward direction
 Vector r(-1/sqrt(2), 1/sqrt(2), 0);     // right direction
 Vector u = r.cross(l);     // up direction
@@ -65,7 +65,9 @@ void input(string filename){
         }
     }
     // objects.push_back(new Checkerboard(pos,checkerboard_side,zFar)); 
-    objects.push_back(new Checkerboard(checkerboard_side,{checkerboard_ka,checkerboard_kd,checkerboard_ks,checkerboard_reflectance})); 
+    Object *checkerboard = new Checkerboard(checkerboard_side,{checkerboard_ka,checkerboard_kd,checkerboard_ks,checkerboard_reflectance}) ;
+    checkerboard->coefficients.reflectance = 1.0 - checkerboard_ka- checkerboard_kd-checkerboard_ks ;
+    objects.push_back(checkerboard); 
 
     int num_light;
 	in >> num_light;
@@ -84,15 +86,15 @@ void input(string filename){
 		in >> *spotlight;
 		lights.push_back(spotlight);
 	}
-
-    cout<<"Total Lights: "<< lights.size()<<endl;
 }
 
 
 Color ray_tracing(Ray ray, int level, bool reflect = false ){
-    const double eps = 1e-4; 
+    // if(level <= 0) { 
+    //     cout<<"reachec last \n";
+    //     return BLACK;
+    // }
     if(level < 0) return BLACK;
-
     // find the nearest object that intersects with the ray 
     Object *nearestObject = nullptr ;
     double t,tMin;
@@ -101,7 +103,7 @@ Color ray_tracing(Ray ray, int level, bool reflect = false ){
     Vector normal,minNormal; 
     for(int k=0;k<(int)objects.size();k++){
         t = objects[k]->intersect(ray,&color,normal) ;
-        if(t>eps && (nearestObject== nullptr || t<tMin) ){
+        if(t>0 && (nearestObject== nullptr || t<tMin) ){
             tMin = t; 
             nearestObject=objects[k]; 
             minColor = color; 
@@ -111,11 +113,10 @@ Color ray_tracing(Ray ray, int level, bool reflect = false ){
     // minColor.fixRange();
     color = minColor ;
     normal = minNormal; 
-    if( nearestObject == nullptr  ) return BLACK; 
-
+    if( nearestObject == nullptr || tMin <= 0 ) return BLACK; 
+    if( level == 0 ) return color ;
     // if an intersection is found, then shade the pixel; 
     
-    vector<Ray> reflectedRays ;
     Vector intersection_point = ray.origin + ray.dir * tMin;
     Color tempColor ;
     Vector tempNormal ;
@@ -146,18 +147,24 @@ Color ray_tracing(Ray ray, int level, bool reflect = false ){
             double distance_to_source = (lights[i]->pos - intersection_point).abs();
             double scaling_factor = exp(-distance_to_source*distance_to_source*lights[i]->falloff);
             lambert += max(0.0,-lightray.dir.dot(normal))*scaling_factor;
-            Ray reflection = Ray(intersection_point, lightray.dir -  normal*(2 * lightray.dir.dot(normal)) ); 
+            Ray reflection = Ray(intersection_point, lightray.dir -  normal*(2.0 * lightray.dir.dot(normal)) ); 
             phong += pow(max(0.0, -ray.dir.dot(reflection.dir)), nearestObject->shine)*scaling_factor;
         }
     }
+    color = color * ( nearestObject->coefficients.ka + 
+                      nearestObject->coefficients.kd * lambert + 
+                      nearestObject->coefficients.ks * phong ); 
+    // color = color + color * nearestObject->coefficients.reflectance;  
 
-
-    color = color * ( nearestObject->coefficients.ka + nearestObject->coefficients.kd * lambert + nearestObject->coefficients.ks * phong ); 
-    Ray reflected_ray = Ray(intersection_point, ray.dir-normal*(2*(ray.dir.dot(normal))) );
-    reflected_ray.origin = reflected_ray.origin + reflected_ray.dir*eps;
+    Ray reflected_ray(intersection_point, ray.dir-normal*(2.0*(ray.dir.dot(normal))) );
+    reflected_ray.origin = reflected_ray.origin + reflected_ray.dir * 2.0; //*(EPSILON);
     Color reflected_color = ray_tracing(reflected_ray,level-1,true);
     color = color + reflected_color; // * nearestObject->coefficients.reflectance;
-    return reflect  ? color * nearestObject->coefficients.reflectance  : color;
+
+    
+    return reflect ? color * nearestObject->coefficients.reflectance  : color;
+    // return color * nearestObject->coefficients.reflectance ;
+    // return color ; // + color * nearestObject->coefficients.reflectance;
 }
 
 
@@ -180,12 +187,12 @@ void save_frame(){
 
 	for(int i=0;i<image_width;i++){
 		for(int j=0;j<image_height;j++){
-			Vector pixel = top_left + (r* dx * i) - (u * dy * j);
+			Vector pixel = top_left + (r* (dx * i) ) - (u * (dy * j)) ;
 			
             Ray ray(pos,pixel-pos);
 			
             Color color = ray_tracing(ray,recursion_level) ;         
-            // color.fixRange();
+            color.fixRange();
 			image.set_pixel(i, j, color.R, color.G, color.B);
 		}
 
