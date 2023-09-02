@@ -350,14 +350,13 @@ class Sphere : public Object{
     }
 
     virtual double intersect(Ray ray, Color *color, Vector &normal){
-        // return -1; 
         *color = this->color; 
 
         //equation  t*t + 2(P0-O).D t + (P0-O).(P0-O)-r*r = 0 ;
-        ray.origin = ray.origin - reference_point; // P0-O 
+        Vector P0_O  = ray.origin - reference_point; // P0-O 
         double a = 1; 
-        double b = 2 * (ray.dir.dot(ray.origin));
-        double c = (ray.origin.dot(ray.origin)) - (length*length);
+        double b = 2 * (ray.dir.dot(P0_O));
+        double c = (P0_O.dot(P0_O)) - (length*length);
 
         double discriminant = b*b - 4 * a * c;
         double t = -1;

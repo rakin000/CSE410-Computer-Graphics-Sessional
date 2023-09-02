@@ -40,7 +40,7 @@ void input(string filename){
     in>>image_height ;
     image_width = image_height ;
     in>>checkerboard_side ;
-    in>>checkerboard_ka>>checkerboard_kd>>checkerboard_ks; 
+    in>>checkerboard_ka>>checkerboard_kd>>checkerboard_reflectance; 
     
     int num_obj; 
     in>>num_obj ;
@@ -65,8 +65,8 @@ void input(string filename){
         }
     }
     // objects.push_back(new Checkerboard(pos,checkerboard_side,zFar)); 
+    checkerboard_ks = 0 ;
     Object *checkerboard = new Checkerboard(checkerboard_side,{checkerboard_ka,checkerboard_kd,checkerboard_ks,checkerboard_reflectance}) ;
-    checkerboard->coefficients.reflectance = 1.0 - checkerboard_ka- checkerboard_kd-checkerboard_ks ;
     objects.push_back(checkerboard); 
 
     int num_light;
@@ -90,11 +90,7 @@ void input(string filename){
 
 
 Color ray_tracing(Ray ray, int level, bool reflect = false ){
-    // if(level <= 0) { 
-    //     cout<<"reachec last \n";
-    //     return BLACK;
-    // }
-    if(level < 0) return BLACK;
+    if(level <= 0) return BLACK;
     // find the nearest object that intersects with the ray 
     Object *nearestObject = nullptr ;
     double t,tMin;
@@ -114,9 +110,9 @@ Color ray_tracing(Ray ray, int level, bool reflect = false ){
     color = minColor ;
     normal = minNormal; 
     if( nearestObject == nullptr || tMin <= 0 ) return BLACK; 
-    if( level == 0 ) return color ;
+    // if( level == 0 ) return color ;
     // if an intersection is found, then shade the pixel; 
-    
+    // vector<Ray> reflectedrays;
     Vector intersection_point = ray.origin + ray.dir * tMin;
     Color tempColor ;
     Vector tempNormal ;
@@ -134,8 +130,12 @@ Color ray_tracing(Ray ray, int level, bool reflect = false ){
             if( theta > ((Spotlight*)lights[i])->cutoffAngle ) continue;
         }
 
+        // double t2 = (intersection_point - lights[i]->pos).abs();
+        // if(t2 < EPSILON) continue;
+
         bool isObscured = 0; 
         for(int k=0;k<(int)objects.size();k++){
+            if( objects[k] == nearestObject ) continue ;
             t = objects[k]->intersect(lightray,&tempColor,tempNormal) ;
             if(t>0 && t<tLightray){
                 isObscured = 1; 
@@ -149,22 +149,28 @@ Color ray_tracing(Ray ray, int level, bool reflect = false ){
             lambert += max(0.0,-lightray.dir.dot(normal))*scaling_factor;
             Ray reflection = Ray(intersection_point, lightray.dir -  normal*(2.0 * lightray.dir.dot(normal)) ); 
             phong += pow(max(0.0, -ray.dir.dot(reflection.dir)), nearestObject->shine)*scaling_factor;
+            
+            // reflection.origin = reflection.origin + reflection.dir * (EPSILON);
+            // Color reflected_color = ray_tracing(reflection,level-1,true);
+            // color = color + reflected_color ;
+            // reflectedrays.push_back(reflection);
         }
     }
     color = color * ( nearestObject->coefficients.ka + 
                       nearestObject->coefficients.kd * lambert + 
                       nearestObject->coefficients.ks * phong ); 
     // color = color + color * nearestObject->coefficients.reflectance;  
-
     Ray reflected_ray(intersection_point, ray.dir-normal*(2.0*(ray.dir.dot(normal))) );
-    reflected_ray.origin = reflected_ray.origin + reflected_ray.dir * 2.0; //*(EPSILON);
+    reflected_ray.origin = reflected_ray.origin + reflected_ray.dir * (EPSILON);
+    // reflectedrays.push_back(reflected_ray);
     Color reflected_color = ray_tracing(reflected_ray,level-1,true);
-    color = color + reflected_color; // * nearestObject->coefficients.reflectance;
-
-    
-    return reflect ? color * nearestObject->coefficients.reflectance  : color;
+    // for (Ray &ray : reflectedrays)
+        // reflected_color = reflected_color + ray_tracing(ray,level-1,true);
+    color = color + reflected_color*nearestObject->coefficients.reflectance;
+    // reflected_color
+    // return reflect ? color * nearestObject->coefficients.reflectance  : color;
     // return color * nearestObject->coefficients.reflectance ;
-    // return color ; // + color * nearestObject->coefficients.reflectance;
+    return color ; // + color * nearestObject->coefficients.reflectance;
 }
 
 
@@ -410,7 +416,7 @@ int main(int argc, char** argv){
     if( argc > 1 )
         input(argv[1]) ;
     else input("description.txt") ;
-
+    
     glutInit(&argc, argv);
     // glutInitDisplayMode(GLUT_SINGLE);
     glutInitWindowSize(window_width, window_height);
