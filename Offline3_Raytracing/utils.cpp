@@ -287,12 +287,12 @@ public:
         glEnd();
     }
 
-    double intersect2(Ray &r){
+    double intersect(Ray &r){
         Vector pvec = r.dir.cross(AC);
 
         float det = AB.dot(pvec);
 
-        if (det < 0.000001)
+        if (det < EPSILON)
             return -1;
 
         float invDet = 1.0 / det;
@@ -309,31 +309,6 @@ public:
             return -1;
 
         return AC.dot(qvec) * invDet;
-    }
-
-
-    Vector intersectionPoint ;
-    double getTwiceArea(Vector &a,Vector &b,Vector &c) {
-        return ((b-a).cross(c-a)).abs() ;
-    }
-    bool isInside(Vector &p) {
-        return abs( getTwiceArea(A, B, p) + getTwiceArea(A, C, p) + getTwiceArea(B, C, p) - getTwiceArea(A, B, C)) < EPSILON;
-    }
-    double intersect(Ray &ray) {
-        // Point d = ray.dir;
-        Vector normal = this->normal ;// normal = getNormal();
-        double dotP = normal.dot(ray.dir);
-        if (dotP > EPSILON) normal = normal * -1;
-        double y = normal.dot(A);
-        if (abs(dotP) < EPSILON) return -1;
-        double t = ( y - normal.dot(ray.origin) ) / (dotP);
-        intersectionPoint = ray.origin + ray.dir * t;
-
-        if (isInside(intersectionPoint)) 
-            return t;
-        
-
-        return -1;
     }
 };
 
